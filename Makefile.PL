@@ -1,10 +1,8 @@
-our $VERSION = '2.0.3';
+our $VERSION = '2.0.5';
 
 use Tk::MMutil;
 
 use strict;
-
-$| = 1;
 
 our (
      $PERL,
@@ -25,8 +23,10 @@ our (
      $TAPE,
 );
 
-$PERL       = '/usr/local/bin/perl';
-$PREFIX     = '/usr/local';
+$PERL       = $^X;
+$PREFIX     = '/opt'       if -d '/opt';
+$PREFIX     = '/usr/local' if -d '/usr/local';
+$PREFIX   ||= '/usr/local';
 
 $JUKE_ROOT  = "$PREFIX/tkjuke/$VERSION";
 $JUKE_EXE   = "$JUKE_ROOT/juke";
@@ -187,7 +187,6 @@ $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; print"                      
 $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; s+JUKE_EXE+$JUKE_EXE+g; print" tkjuke > $blib_root/tkjuke
 $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; print"                                    Jukebox.pm > $blib_root/Jukebox.pm
 cp -Rp juke.config*   $blib_root/
-cp -Rp tkjuke.config* $blib_root/
 cp Proc/*   $blib_root/Proc/
 cp Tk/ExecuteCommand.pm  $blib_root/Tk/
 cp Tk/CollapsableFrame.pm  $blib_root/Tk/
@@ -200,6 +199,13 @@ END
 
     print " (system error=$?) " if $?;
     print " done.\n";
+
+    print "\nCreating a sample tkjuke.config file (please hand edit).\n";
+    system <<"END";
+cp tkjuke.config.samples/tkjuke.config .
+cp tkjuke.config $blib_root/
+END
+    warn "cp failed: $?" if $?;
 
     print "\nConfiguration is complete.\n\n";
 

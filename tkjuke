@@ -15,6 +15,8 @@
 #
 # When tkjuke is supplied a single argument, it's a string representation
 # of a Tk hexadecimal window ID within which the slave should embed itself.
+# For debugging, if the tkjuke argument is the string "slave" then a stand-
+# alone slave is started.
 #
 # Communication is via password-less ssh with X11 forwarding enabled.  For
 # simplicity, we assume OpenSSH, so as to have complete and known control
@@ -118,7 +120,8 @@ sub bccmd {
 
 sub discon {
 
-    # Disconnect a jukebox by killing the ssh process and deleting the NoteBook page.
+    # Disconnect a jukebox by killing the ssh process and deleting
+    # the NoteBook page.
 
     my ($page) = @_;
 
@@ -204,23 +207,33 @@ sub master {
          ['File',    file],
          ['Help',    help];
 
-    $nb = $mw_master->NoteBook(-dynamicgeometry => 1)->pack;
+    $nb = $mw_master->NoteBook(
+        -dynamicgeometry => 1,
+        -background      => 'lightblue',
+    )->pack;
     my $nb_con = $nb->add('Connect', -label => 'Connect');
     my $nb_con_l = $nb_con->Listbox(qw/-width 65 -font 9x15bold/)->pack;
+
+    $nb_con->Label(
+        -font       => '9x15bold',
+        -foreground => 'blue',
+        -text       => 'Connect Manually',
+    )->pack(-pady =>20);
+
     my $nb_con_f = $nb_con->Frame->pack;
     my $tkjuke;
     my $e;
-    foreach my $item (['tkjuke', \$tkjuke]) {
-        my $l = $item->[0] . ':';
+    foreach my $item (['tkjuke command', \$tkjuke]) {
+        my $l = $item->[0] . ':  ';
         my $le = $nb_con_f->LabEntry(
             -label        => ' ' x (8 - length $l) . $l,
             -labelPack    => [qw/-side left -anchor w/],
-            -labelFont    => '9x15bold',
+            -labelFont    => '9x15',
             -textvariable => $item->[1],
-            -width        => 35,
+            -width        => 50,
         );
         $le->pack(qw/ -fill x -expand 1/);
-	$e = $le->Subwidget('entry') if $l eq 'tkjuke:';
+	$e = $le->Subwidget('entry') if $l eq 'tkjuke command:  ';
     }
 
     $nb->pageconfigure('Connect', -raisecmd => sub {$e->focus});
@@ -228,7 +241,7 @@ sub master {
     $nb_con_f->Button(
         -text    => 'Connect',
         -command => [\&start_slave, \$tkjuke],
-    )->pack;
+    )->pack(-pady => 10);
 
     open(T, "JUKE_ROOT/tkjuke.config") or warn "Cannot open JUKE_ROOT/tkjuke.config: $!";
     my @auto;
@@ -279,7 +292,7 @@ sub msgsys {
     if ($wait_ack) {
 	my $ans = $mw->messageBox(
             -font       => '9x15',
-            -text       => "Okay to execute:\n\n$cmd",
+            -message    => "Okay to execute:\n\n$cmd",
             -title      => 'ExecuteCommand',
             -type       => 'yesno',
             -wraplength => '10i',
@@ -308,7 +321,7 @@ sub msgsys {
 sub ok {
 
     return $mw_master->messageBox(
-        -text       => $_[1],
+        -message    => $_[1],
         -title      => $_[0],
         -type       => 'ok',
         -wraplength => '6i',
@@ -319,8 +332,12 @@ sub ok {
 sub slave {
 
     my $slave_mw = MainWindow->new;
-    $slave_mw->withdraw;
-    $mw = $slave_mw->Toplevel(-use => hex $slave);
+    if ($slave eq 'slave') {
+	$mw = $slave_mw;
+    } else {
+	$slave_mw->withdraw;
+	$mw = $slave_mw->Toplevel(-use => hex $slave);
+    }
 
     $empty = '*  empty  *';	# representation of an empty SE
     $full  = '*  full  *';	# representation of a  full  SE
@@ -357,6 +374,10 @@ sub slave {
     # and the scrolled Pane containing the media drives.  If only
     # one drive, select it.
 
+    $drives_frame->Label(
+        -foreground => 'blue',
+        -text       => &version,
+    )->pack(-pady => 20);
     my $t = $drives_frame->ROText(qw/-height 4 -width 40/);
     $t->pack(qw/-side right -padx 30/);
 
@@ -404,7 +425,7 @@ sub slave {
     my $cf = $mw->CollapsableFrame(qw/-title Details -width 600 -height 250/);
     $cf->pack(qw/-side top -fill x -expand 1/);
     my $colf = $cf->Subwidget('colf');
-    $cf->toggle;
+    $cf->toggle;		# open the CollapsableFrame
 
     $ec = $colf->ExecuteCommand(
         -command    => '',
@@ -631,7 +652,8 @@ sub help {
       ['command', 'Connecting to a jukebox', -command => \&usage_c],
       ['command', 'Operating a jukebox',     -command => \&usage_m],
       '-',
-      ['command', 'Version Information',     -command => \&version],
+      ['command', 'Version Information',     -command =>
+          sub {ok 'Version Information', &version}],
     ];
 
 } # end help
@@ -756,6 +778,6 @@ sub usage_m {
 
 sub version {
 
-    return ok 'Version Information', "tkjuke $JUKE_CONFIG{VERSION}, Perl $], Tk $Tk::VERSION";
+    "tkjuke $JUKE_CONFIG{VERSION}, Perl $], Tk $Tk::VERSION";
 
 } # end version

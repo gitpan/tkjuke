@@ -12,8 +12,11 @@ Proc/Killfam.pm
 README
 t/juke.t
 tkjuke
-tkjuke.config
+tkjuke.config.samples/tkjuke.config
 Tk/CollapsableFrame.pm
 Tk/ExecuteCommand.pm
 Tk/JukeboxDrive.pm
 Tk/JukeboxSlot.pm
+images/README
+images/connect.jpg
+images/tkjuke-large.gif
