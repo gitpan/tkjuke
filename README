@@ -15,16 +15,6 @@ Perl and Perl/Tk are available from the CPAN, and are presumed already
 installed.  "mtx" is available at sourceforge.net, and is presumed
 already installed.
 
-In "tkjuke" lingo, a jukebox is a physical device consisting of one or
-more Data Transfer Elements (DTE) and one or more Storage Elements
-(SE).  Think of a DTE as the hardware that reads/writes storage media,
-perhaps magnetic tapes or optical disks.  An SE stores media until it's
-loaded into a DTE.  A mail slot is a special SE used to add or remove
-(bump) media from the jukebox without having to open the jukebox up,
-as is required with a simple stacker device. In the case of two-sided
-optical media, "tkjuke" can invert the media if there is hardware
-support.
-
 This code has been tested with various auto-loading stackers, and I've
 written emulation code that simulates larger jukeboxes with multiple
 drives, mail slots and invertable media, but since I don't actually
@@ -57,5 +47,4 @@ Steve Lidie
 Lehigh University Computing Center
 sol0@lehigh.edu
 
-2003/07/01
-
+2003/07/14

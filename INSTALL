@@ -4,14 +4,14 @@
 
 
 *****
-***** Prerequisites:
+***** PREREQUISITES:
 *****
 
 This software requires Perl/Tk, and obviously, mtx.  
 
 - mtx
 
-  Tested with mtx versions 1.2.9, 1.2.10 and 1.2.15.
+  Tested with mtx versions 1.2.9, 1.2.10, 1.2.15 and 1.2.17.
 
 - Perl
 
@@ -54,7 +54,7 @@ This software requires Perl/Tk, and obviously, mtx.
 	make install
 
 *****
-***** Installation of tkjuke follows the Perl idiom. After unpacking:
+***** INSTALLATION OF TKJUKE FOLLOWS THE PERL IDIOM. AFTER UNPACKING:
 *****
 
 perl Makefile.PL
@@ -64,7 +64,7 @@ make install
 
 At this point, edit tkjuke.config and make entries for your jukeboxes
 using the example entries as a guide - tkjuke will auto-connect to the
-listed machines.  If you have not setup either host based or key
+listed machines.  If you have not setup either host-based or key
 authentication the you'll need to enter the root passwords in the
 window from which tkjuke was started. 
 
@@ -84,7 +84,7 @@ window from which tkjuke was started.
   Please, send any changes to sol0@lehigh.edu.
 
 *****
-***** Installation complete.
+***** INSTALLATION COMPLETE.
 *****
 
   OK, juke/tkjuke installation and configuration is complete.  Have the
@@ -94,4 +94,4 @@ Steve Lidie
 Lehigh University Computing Center
 sol0@lehigh.edu
 
-2003/07/09
+2003/07/14

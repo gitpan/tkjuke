@@ -1,12 +1,12 @@
 
-***** TODO
+***** TODO LOG
 
 1) Are "-" legal barcode characters?  Fix the \w regex so
    barcodes 1 slot-1 works.
    Steve Lidie, sol0@lehigh.edu, 2002/07/02.
 
 
-***** Change Log
+***** CHANGE LOG
 
 
 ***** 0.0.6 -> 1.0.0
@@ -24,18 +24,8 @@
    ********************* DONE, SOL, 2002/07/03 *****************************
 
    Implemented using a SDBM database in version 0.0.6.  Barcodes are set
-   either by clicking on a media slot in tkjuke, or the juke command line:
-   
-     juke barcodes filename
-     juke barcodes saddr1 barcode1 [ saddr2 barcode2 .... ]
-
-   If a filename is specified, each line is of the form 'saddr=barcode',
-   where 'barcode' is the barcode, and 'saddr' is the slot address:
-  
-      host:changer:slot
-
-   'slot' is required and is the slot number, 'host' defaults to the local
-   host and 'changer'is the default changer device name on 'host'.
+   either by clicking on a media slot in tkjuke, or the juke command line.
+   See the juke POD for details.
 
 2) "juke loaded" must return a list of loaded barcodes.
    Steve Lidie, sol0@lehigh.edu, 2002/06/12.
@@ -59,8 +49,16 @@
 4) Tested with mtx 1.2.17.
 
 
-***** 2.0.1, 2003/07017
+***** 2.0.1, 2003/0707
 
 1) Turn tkjuke into a master/slave program, embedding slave tkjuke windows
    inside the master's NoteBook widget.
 
+
+***** 2.0.6, 2003/07/11
+
+1) To share messageBox calls, even a slave needs to initialize $mw_master.
+
+2) $EJECT_BEFORE_UNLOAD - forgot to add it to juke's next/previous code.
+
+3) POD-ify juke/tkjuke documentation.

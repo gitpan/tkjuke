@@ -1,38 +1,10 @@
 #!PERL
 #
+# tkjuke
+#
 # Provide a Perl/Tk graphical interface for the "mtx" helper command "juke".
 #
-# tkjuke runs in either master or slave mode.  As a master, tkjuke displays
-# one or more tkjuke windows from the local and/or remote tkjukeboxes in tabs
-# of a NoteBook widget. When an operator wants to manipulate a jukebox, she 
-# tells the master to contact the requisite computer and start tkjuke in
-# slave mode. The slave's window becomes embedded in a NoteBook tab on the
-# master.
-#
-# When tkjuke is invoked with no command line argument, it becomes a master.
-# The master also reads the file tkjuke.config for the list of jukeboxes
-# under its control.
-#
-# When tkjuke is supplied a single argument, it's a string representation
-# of a Tk hexadecimal window ID within which the slave should embed itself.
-# For debugging, if the tkjuke argument is the string "slave" then a stand-
-# alone slave is started.
-#
-# Communication is via password-less ssh with X11 forwarding enabled.  For
-# simplicity, we assume OpenSSH, so as to have complete and known control
-# over the command line arguments.
-#
-# Many thanks to Eric Lee Green - I could not have written this without his
-# counseling.  Any bugs and/or misunderstandings concerning jukebox operations
-# are my own.
-#
-# Steve Lidie, Lehigh University Computing Center, 2002/06/01.
-# sol0@lehigh.edu
-#
-# Copyright (C) 2002 - 2003, S. O. Lidie.  All rights reserved.
-#
-# This program is free software; you can redistribute it and/or modify it
-# under the same terms as Perl itself.
+# See the POD for usage information.
 
 use lib 'JUKE_ROOT';
 use Jukebox;
@@ -338,6 +310,7 @@ sub slave {
 	$slave_mw->withdraw;
 	$mw = $slave_mw->Toplevel(-use => hex $slave);
     }
+    $mw_master = $mw;
 
     $empty = '*  empty  *';	# representation of an empty SE
     $full  = '*  full  *';	# representation of a  full  SE
@@ -781,3 +754,79 @@ sub version {
     "tkjuke $JUKE_CONFIG{VERSION}, Perl $], Tk $Tk::VERSION";
 
 } # end version
+
+__END__
+
+=head1 NAME
+
+B<tkjuke> - manipulate jukeboxes from a Perl/Tk program
+
+=head1 SYNOPSIS
+
+tkjuke [ "slave" | window ID ]
+
+=head1 DESCRIPTION
+
+B<tkjuke> is a GUI for manipulating a jukebox in a windowed environment,
+which uses the program B<juke> as the underlying controller.
+
+B<tkjuke> runs in either master or slave mode.  As a master, B<tkjuke>
+displays one or more B<tkjuke> windows from the local and/or remote
+jukeboxes in tabs of a NoteBook widget. When an operator wants to
+manipulate a jukebox, she tells the master to contact the requisite
+computer and start B<tkjuke> in slave mode. The slave's window becomes
+embedded in a NoteBook tab on the master.
+
+When B<tkjuke> is invoked with no command line argument, it becomes a
+master.  The master also reads the file B<tkjuke.config> for the list
+of jukeboxes under its control.  Each lines designates a jukebox
+(lines are split below, but in the actual configuration file use one
+line per jukebox):
+
+
+    auto-connect = 1 tkjuke = \
+        "/usr/bin/ssh -p 222 -X -f root@rigel /home/root/bin/tkjuke"
+    auto-connect = 1 tkjuke = \
+        "/usr/bin/ssh -p  22 -X -f root@fire  /home/root/bin/tkjuke"
+
+If I<auto-connect> = 1, the master B<tkjuke> will try to acquire the
+associated jukebox during startup. I<tkjuke> is a double-quoted
+OpenSSH string that invokes a slave tkjuke.
+
+When B<tkjuke> is supplied a single argument, it's a string
+representation of a Tk hexadecimal window ID within which the slave
+should embed itself.  For debugging, if the B<tkjuke> argument is the
+string "slave" then a standalone slave is started.
+
+Communication is via password-less B<ssh> with X11 forwarding enabled.
+For simplicity, we assume OpenSSH, so as to have complete control over
+known command line arguments.
+
+Many thanks to Eric Lee Green - I could not have written this without
+his counseling.  Any bugs and/or misunderstandings concerning jukebox
+operations are my own.
+
+=head1 EXAMPLE
+
+To run the master B<tkjuke>:
+
+    tkjuke
+
+To run a stand-alone slave:
+
+    tkjuke slave
+
+=head1 AUTHOR
+
+sol0@lehigh.edu
+
+Copyright (C) 2002 - 2003, Steve Lidie. All rights reserved.
+
+This program is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
+
+=head1 KEYWORDS
+
+mtx, juke, jukebox
+
+=cut

@@ -1,24 +1,11 @@
 #!PERL -w
 #
-# "juke" is a command line wrapper for the jukebox control program "mtx".
+# juke
+#
+# Provide a command line wrapper for the jukebox control program "mtx".
 # It's derived from "stacker", which emulates the IRIX "stacker" command.
 #
-# "juke" exists because:
-#
-#    . its interface is simple
-#    . usage is consistent across various machines and operating systems
-#    . it implements psuedo barcodes for changers lacking a reader
-#    . it acts as my jukebox simulator - no mtx hacking required
-#    . it waits for a "media ready" condition when changing media
-#    . it's usable in file backup solutions for all the above reasons
-#
-# Steve Lidie, Lehigh University Computing Center, 1998/05/22.
-# sol0@lehigh.edu
-#
-# Copyright (C) 1998 - 2003, S. O. Lidie.  All rights reserved.
-#
-# This program is free software; you can redistribute it and/or modify it
-# under the same terms as Perl itself.
+# See the POD for usage information.
 
 use lib 'JUKE_ROOT';
 use Fcntl;
@@ -83,7 +70,7 @@ sub barcodes {
 
 sub bcenter {
 
-    # Enter a psuedo-barcode into the DB.
+    # Enter a pseudo-barcode into the DB.
 
     my ($l, $bc) = @_;
 
@@ -132,7 +119,7 @@ sub bcenter {
 
 sub bcremove {
 
-    # Remove a psuedo-barcode from the DB.
+    # Remove a pseudo-barcode from the DB.
 
     my ($hn, $ch, $dte, $sl) = @_;
 
@@ -348,6 +335,9 @@ sub main {
 	    ($bc) = $out[1 + $dte] =~ /VolumeTag = (.*)/;
 	    
 	    # Perform the operation - exit if errors.
+ 
+	    my $eject = $JUKE_CONFIG{EJECT_BEFORE_UNLOAD};
+	    sys "$mt $eject 2>&1" if $eject;
 
 	    (@out) = sys "$mtx @ARGV 2>&1", 'warn';
 	    last CASE if $#out > 1; # probably a usage: message
@@ -435,7 +425,7 @@ sub main {
 sub status {
 
     # This subroutine executes an "mtx status" command and returns the
-    # results - possibly modified with psuedo barcodes.
+    # results - possibly modified with pseudo barcodes.
 
     my (@status) = sys "$mtx status 2>&1";
     foreach (@status) {
@@ -528,3 +518,88 @@ juke V${JUKE_CONFIG{VERSION}} usage:
 USAGE
 
 } # end usage
+
+__END__
+
+=head1 NAME
+
+B<juke> - manipulate jukeboxes from the command line
+
+Provide a command line wrapper for the jukebox control program B<mtx>.
+It's derived from my B<stacker> program, which emulates the IRIX
+B<stacker> command.
+
+B<juke> exists because:
+
+ . its interface is simple
+ . usage is consistent across machines and operating systems
+ . it implements pseudo barcodes for changers lacking a reader
+ . it acts as my jukebox simulator - no mtx hacking required
+ . it waits for a "media ready" condition when changing media
+ . it's usable in file backup solutions for all the above
+
+=head1 SYNOPSIS
+
+juke -help
+
+=head1 DESCRIPTION
+
+In B<juke> lingo, a jukebox is a physical device consisting of one or
+more Data Transfer Elements (DTE) and one or more Storage Elements
+(SE).  Think of a DTE as the hardware that reads/writes storage media,
+perhaps magnetic tapes or optical disks.  An SE stores media until it's
+loaded into a DTE.  A mail slot is a special SE used to add or remove
+(bump) media from the jukebox without having to open the jukebox up (as
+is required with a simple stacker device). In the case of two-sided
+optical media, B<juke> can invert the media if there is hardware
+support.
+
+B<juke> can also simulate a barcode capability for jukeboxes lacking a
+real barcode reader. Once media is physically loaded into an SE the
+operator enters the media's barcode.  As long as B<juke> is the only
+program manipulating that media, it is tracked as it moves about the
+jukebox. Barcode information is maintained in a Perl SDBM database.
+
+Barcodes are set either by clicking on a media slot in B<tkjuke>, or
+the B<juke> command line:
+   
+    juke barcodes filename
+    juke barcodes saddr1 barcode1 [ saddr2 barcode2 .... ]
+
+If a filename is specified, each line is of the form I<saddr>=I<barcode>,
+where I<barcode> is the barcode, and I<saddr> is the slot address:
+  
+    host:changer:slot
+
+I<slot> is required and is the SE number, I<host> defaults to the local
+host and I<changer> is the configured changer device for this instance of
+B<juke>.
+
+=head1 EXAMPLE
+
+To see the status of a jukebox:
+
+    juke status
+
+To load media:
+
+    juke load 1
+
+To unload the media:
+
+    juke unload
+
+=head1 AUTHOR
+
+sol0@lehigh.edu
+
+Copyright (C) 2002 - 2003, Steve Lidie. All rights reserved.
+
+This program is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
+
+=head1 KEYWORDS
+
+mtx, jukebox, tkjuke
+
+=cut
