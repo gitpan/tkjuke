@@ -1,0 +1,17 @@
+Changes
+INSTALL
+juke
+Jukebox.pm
+juke.config
+juke.config.irix
+juke.config.linux
+Makefile.PL
+MANIFEST
+Proc/Killfam.pm
+README
+t/juke.t
+tkjuke
+Tk/CollapsableFrame.pm
+Tk/ExecuteCommand.pm
+Tk/JukeboxDrive.pm
+Tk/JukeboxSlot.pm

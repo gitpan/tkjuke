@@ -484,7 +484,7 @@ sub usage {
 
     return <<"USAGE";
 
-juke V${Jukebox::VERSION} usage:
+juke V${VERSION} usage:
 
  juke help                              - print this information
 
@@ -500,7 +500,7 @@ juke V${Jukebox::VERSION} usage:
 
  juke [eepos eepos#] transfer SE# SE#   - transfer media or bump mail slot
 
- juke loaded                            - print barcode of loaded media
+ juke loaded                            - print barcode(s) of loaded media
 
  juke barcodes [pathname | SE# barcode] - print or set jukebox barcode list
 

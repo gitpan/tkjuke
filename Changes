@@ -13,11 +13,11 @@
 
    ********************* DONE, SOL, 2002/07/03 *****************************
 
-   Implemented using a GDBM database in version 0.0.6.  Barcodes are set
+   Implemented using a SDBM database in version 0.0.6.  Barcodes are set
    either by clicking on a media slot in tkjuke, or the juke command line:
    
-     juke filename
-     juke saddr1 barcode1 [ saddr2 barcode2 .... ]
+     juke barcodes filename
+     juke barcodes saddr1 barcode1 [ saddr2 barcode2 .... ]
 
    If a filename is specified, each line is of the form 'saddr=barcode',
    where 'barcode' is the barcode, and 'saddr' is the slot address:

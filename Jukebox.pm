@@ -1,4 +1,3 @@
-$Jukebox::VERSION = 'VERNUM';
 
 package Jukebox;
 
@@ -12,6 +11,7 @@ use base qw/Exporter/;
 @EXPORT = qw/
     $CHANGER $EEPOS_OPEN $EEPOS_SHUT $JUKE
     $LOADERINFO $MT $MTX $NRTAPE sys $TAPE
+    $VERSION
 /;
 
 our (
@@ -24,10 +24,14 @@ our (
      $MTX,
      $NRTAPE,
      $TAPE,
+     $VERSION,
 );
 
 my $sconfig = 'JUKE_ROOT/juke.config';
-open S, $sconfig or die "Cannot open '$sconfig' for read: $!";
+if ( ! open S, $sconfig ) {
+    $sconfig = 'juke.config';
+    open S, $sconfig or die "Cannot open '$sconfig' for read: $!";
+}
 my (@setup) = <S>;
 close S;
 
@@ -43,6 +47,7 @@ my $setup = join ' ', @setup;
 ($MTX)        = $setup =~ / MTX=(.*)/m;
 ($NRTAPE)     = $setup =~ / NRTAPE=(.*)/m;
 ($TAPE)       = $setup =~ / TAPE=(.*)/m;
+($VERSION)    = $setup =~ / VERSION=(.*)/m;
 
 sub sys {
 

@@ -1,4 +1,3 @@
-$Tk::JukeboxDrive::VERSION = 'VERNUM';
 
 package Tk::JukeboxDrive;
 

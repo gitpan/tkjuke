@@ -1,4 +1,3 @@
-$Tk::JukeboxSlot::VERSION = 'VERNUM';
 
 package Tk::JukeboxSlot;
 
