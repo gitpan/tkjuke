@@ -62,3 +62,8 @@
 2) $EJECT_BEFORE_UNLOAD - forgot to add it to juke's next/previous code.
 
 3) POD-ify juke/tkjuke documentation.
+
+
+***** 2.0.7, 2003/12/23
+
+1) Fix JukeboxSlot Checkbutton -onvalue for Tk804.025.

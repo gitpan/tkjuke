@@ -23,7 +23,7 @@ This software requires Perl/Tk, and obviously, mtx.
   Briefly, installation goes like this:
 
 	tar -zxvpf stable.tar.gz
-	cd perl-5.8.0
+	cd perl-5.8.2
 	sh Configure -des -Dprefix=/usr/local
 	make
 	make test
@@ -33,12 +33,12 @@ This software requires Perl/Tk, and obviously, mtx.
 
   Get it from:
 
-	http://mirrors.develooper.com/perl/backup.pause/authors/id/N/NI/NI-S/Tk800.024.tar.gz
+	http://mirrors.develooper.com/perl/backup.pause/authors/id/N/NI/NI-S/Tk804.025.tar.gz
 
   Briefly, installation goes like this:
 
-	tar -zxvpf Tk800.024.tar.gz
-	cd Tk800.024
+	tar -zxvpf Tk804.025.tar.gz
+	cd Tk804.025
 	/usr/local/bin/perl Makefile.PL
 	make
 	make test
@@ -94,4 +94,4 @@ Steve Lidie
 Lehigh University Computing Center
 sol0@lehigh.edu
 
-2003/07/14
+2004/01/14

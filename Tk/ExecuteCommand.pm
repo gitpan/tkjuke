@@ -1,4 +1,4 @@
-$Tk::ExecuteCommand::VERSION = '1.4';
+$Tk::ExecuteCommand::VERSION = '1.5';
 
 package Tk::ExecuteCommand;
 
@@ -26,7 +26,7 @@ sub Populate {
 
     $c->bind('<Return>' => [$doit => 'invoke']);
 
-    my $s = $self->Frame->pack(qw/pady 10/);
+    my $s = $self->Frame->pack(qw/-pady 10/);
     $self->Advertise('spacer' => $s);
     my $l = $self->Label(-text => 'Command\'s stdout and stderr')->pack;
     $self->Advertise('label' => $l);
@@ -34,7 +34,7 @@ sub Populate {
     my $text = $self->Scrolled('ROText');
     $text->pack(qw/-expand 1 -fill both/); 
     $self->Advertise('text' => $text);
-    $self->OnDestroy([$self => 'kill_command']);
+    $self->OnDestroy( sub { killfam 'TERM', $self->{-pid} if defined $self->{-pid} } );
 
     $self->{-finish} = 0;
     $self->{-tid} = undef;
@@ -352,7 +352,7 @@ exec, command, fork, asynchronous, non-blocking, widget
 
 =head1 COPYRIGHT
 
-Copyright (C) 1999 - 2003 Stephen O. Lidie. All rights reserved.
+Copyright (C) 1999 - 2004 Stephen O. Lidie. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

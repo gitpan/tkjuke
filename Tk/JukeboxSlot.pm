@@ -45,7 +45,7 @@ sub Populate {
         -foreground  => [ $l,            qw/foreground  Foreground  blue/ ],
         -height      => [ $l,            qw/height      Height        15/ ],
         -mail        => [ qw/PASSIVE     mail           Mail/,      undef ],
-        -onvalue     => [ $c,            qw/onValue     OnValue/,   $self ],
+        -onvalue     => [ $c,            qw/onValue     OnValue/,       1 ],
         -offvalue    => [ $c,            qw/offValue    OffValue/,      0 ],
         -relief      => [ $self,         qw/relief      Relief     solid/ ],
         -slotnumber  => [ {-text => $c}, qw/slotNumber  SlotNumber     0/ ],
