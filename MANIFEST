@@ -6,7 +6,12 @@ juke.config.samples/juke.config-atl-l5006320000-0022.linux
 juke.config.samples/juke.config-ibm-ult3581ta-i109.linux
 juke.config.samples/juke.config-seagate-viper2000-9942.irix
 juke.config.samples/juke.config-sgi-tzmediachanger-8519.linux
+juke.config.samples/juke.config-ibm-ult3582-211b.aix
 Makefile.PL
+config/make-input.Lewis1-atape
+config/make-input.Mylib
+config/make-input.Rain
+config/make-input.Rigel
 MANIFEST
 Proc/Killfam.pm
 README
@@ -20,4 +25,6 @@ Tk/JukeboxSlot.pm
 images/README
 images/connect.jpg
 images/tkjuke-large.gif
+atape/atape-mtx
+atape/atape-loaderinfo
 META.yml                                 Module meta-data (added by MakeMaker)

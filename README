@@ -2,7 +2,12 @@
 "tkjuke" is a GUI for manipulating a jukebox in a windowed environment,
 which uses the program "juke" as the underlying controller. It has
 been tested under Linux and IRIX - the default configuration defaults
-are suitable for many Linux installations.
+are suitable for many Linux installations. (There is unsupported code
+that uses atape rather than mtx for the controller program. It's a small
+mtx <=> atape interface layer I use on AIX. You can manually copy the
+two programs atape-mtx and atape-loaderinfo somewhere, and then, during
+the "perl Makefile.PL" phase use those programs rather than the real
+loaderinfo, mt and mtx programs.)
 
 The "juke" command is a Perl wrapper to the jukebox control program
 "mtx".  Once installed and configured, manipulating the jukebox is

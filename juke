@@ -164,8 +164,10 @@ sub customize {
     # methods are shown below.  Most commonly, $wait_load1 suffices, but if a
     # rewind returns an error even when the media is ready, try $wait_load2.
     #
-    # $wait_load1 works for RedHat Linux, $wait_load2 works for an LTO Ultrium
-    # library under IRIX.
+    # $wait_load1 works for "mt rewind" commands that return a success or
+    # failure return code. $wait_load2 works for an LTO Ultrium library under
+    # IRIX in which "mt rewind" ALWAYS returns an error, and we are forced to
+    # read stdout.
 
     my $wait_load1 = sub {
 	for (my $n = 1; $n <= 100; $n++) {
@@ -190,12 +192,12 @@ sub customize {
 	die 'wait-media-load-complete timeout';
     }; # end $wait_load2
 
-    $wait_load = $wait_load1;
+    $wait_load = $wait_load1;	# many Linux systems
 
 # Uncomment the following line if the subroutine defined by $wait_load1
 # appears not to work.
 
-#    $wait_load = $wait_load2;
+#   $wait_load = $wait_load2;	# IRIX LTO Ultrium, mt aborts if not ready
 
 } # end customize
 
@@ -270,6 +272,7 @@ sub main {
 	    last CASE;
 	};
 	/^config$/ and do {
+	  print "do config\n";
 	    print STDOUT config;
 	    last CASE;
 	};

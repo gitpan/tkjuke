@@ -1,4 +1,4 @@
-our $VERSION = '2.0.7';
+our $VERSION = '2.1.0';
 
 use Tk::MMutil;
 
@@ -34,8 +34,8 @@ $JUKE_EXE   = "$JUKE_ROOT/juke";
 # juke.config variables.
 
 $CHANGER             = '/dev/sch0';
-$EEPOS_OPEN          = 0;
-$EEPOS_SHUT          = 1;
+$EEPOS_OPEN          = 1;
+$EEPOS_SHUT          = 2;
 $EJECT_BEFORE_UNLOAD = 0;
 $JUKE                = $JUKE_EXE;
 $LOADERINFO          = '/usr/local/sbin/loaderinfo';
@@ -149,7 +149,7 @@ prefix              = $PREFIX
 changer             = $CHANGER
 eepos_open          = $EEPOS_OPEN
 eepos_shut          = $EEPOS_SHUT
-eject_before_unload = $EJECT_BEFORE_UNLOAD,
+eject_before_unload = $EJECT_BEFORE_UNLOAD
 juke                = $JUKE
 loaderinfo          = $LOADERINFO
 mt                  = $MT
@@ -184,6 +184,7 @@ mkdir $blib_root      2> /dev/null
 mkdir $blib_root/Proc 2> /dev/null
 mkdir $blib_root/Tk   2> /dev/null
 $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; print"                           juke > $blib_root/juke
+#$PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; print"                       mtxatape > $blib_root/juke
 $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; s+JUKE_EXE+$JUKE_EXE+g; print" tkjuke > $blib_root/tkjuke
 $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; print"                                    Jukebox.pm > $blib_root/Jukebox.pm
 cp -Rp juke.config*   $blib_root/
@@ -194,6 +195,7 @@ cp Tk/JukeboxSlot.pm  $blib_root/Tk/
 cp Tk/JukeboxDrive.pm  $blib_root/Tk/
 chmod -R 744 $blib_root
 chmod    755 $blib_root/juke
+#chmod    755 $blib_root/mtxatape
 chmod    755 $blib_root/tkjuke
 END
 

@@ -6,6 +6,7 @@
 #
 # See the POD for usage information.
 
+use File::Basename;
 use lib 'JUKE_ROOT';
 use Jukebox;
 use Proc::ProcessTable;
@@ -15,7 +16,7 @@ use Tk::CollapsableFrame;
 use Tk::ExecuteCommand;
 use Tk::JukeboxDrive;
 use Tk::JukeboxSlot;
-use Tk::widgets qw/DialogBox LabEntry NoteBook Pane ROText/;
+use Tk::widgets qw/ DialogBox LabEntry NoteBook Pane ROText /;
 
 use subs qw/
     bccmd discon fini file get_drives get_slots help init main master
@@ -40,6 +41,7 @@ our (
      $nb,                       # NoteBook
      $opmenu,			# popup operations Menu
      %pages,                    # names of active NoteBook pages
+     $pidfile,                  # slave's PID
      $quit,			# application cleanup subroutine
      $scount,			# slot count
      $se,			# regex for an empty DTE
@@ -311,6 +313,14 @@ sub slave {
 	$mw = $slave_mw->Toplevel(-use => hex $slave);
     }
     $mw_master = $mw;
+    $SIG{HUP} = sub { &synchronize };
+    $mw->repeat( 10_000 => sub { $mw->idletasks } );
+
+    $pidfile = ( $slave eq 'slave' ) ? 'test' : basename $JUKE_CONFIG{CHANGER};
+    $pidfile = '/tmp/tkjuke-slave-' . $pidfile . '.pid';
+    open PID, ">$pidfile" or die "Cannot open $pidfile: $!";
+    print PID "$$\n";
+    close PID or die "Cannot close $pidfile: $!";
 
     $empty = '*  empty  *';	# representation of an empty SE
     $full  = '*  full  *';	# representation of a  full  SE
@@ -492,8 +502,12 @@ sub synchronize {
     # data, if available.  Do NOT change the "DTE" and "SE" strings
     # without a coordinated change to the variables $dte and $se!
 
+
     my $date = scalar localtime;
     my $text = $ec->Subwidget('text')->Subwidget('scrolled');
+    $text->insert('end', "$date SYN: synchronizing ...\n");
+    $text->see('end');
+    $text->update;
 
     if ($ec->Subwidget('doit')->cget(-text) eq 'Cancel') {
 	$text->insert('end', "$date BSY: cannot synchronize\n");
@@ -502,8 +516,10 @@ sub synchronize {
 	return 0;
     }
 
-    my (@status) = sys "$JUKE_CONFIG{JUKE} status";
-    chomp @status;
+    my( $end ) = $text->index( 'end' );
+    my (@status) = msgsys "$JUKE_CONFIG{JUKE} status", 0;
+    @status = split /\n/, $text->get( $end, 'end' );
+    $#status--;			# trim completion date/time
 
     # Media drives are in $status[1]           .. $status[$dcount].
     # Media slots  are in $status[$dcount + 1] .. $status[$#status].
@@ -551,7 +567,7 @@ sub synchronize {
 	($ef)      = $s =~ /:(\w+)?/;
 	($barcode) = $s =~ /VolumeTag=(.*)/;
 	if (defined($barcode) and exists $loaded{$barcode}) {
-	    $barcode = "^..  DTE $loaded{$barcode}  ";
+	    $barcode = "^..  DTE $loaded{$barcode}  ";                            
 	}
 	if (not $barcode) {
 	    $barcode = ($ef eq 'Full') ?  $full : $empty;
@@ -677,8 +693,6 @@ sub lu {
 } # end lu
 
 sub refresh {
-
-    msgsys "$JUKE_CONFIG{JUKE} status", 0;
 
     synchronize;
 

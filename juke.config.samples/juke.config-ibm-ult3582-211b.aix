@@ -1,0 +1,11 @@
+export CHANGER=/dev/smc0
+export EEPOS_OPEN=1
+export EEPOS_SHUT=2
+export EJECT_BEFORE_UNLOAD=0
+export JUKE=/home/root/tkjuke/2.1.0/juke
+export LOADERINFO=/home/root/tkjuke/2.1.0/atape/atape-loaderinfo
+export MT=/home/root/tkjuke/2.1.0/atape/atape-mtx
+export MTX=/home/root/tkjuke/2.1.0/atape/atape-mtx
+export NRTAPE=/dev/rmt0.1
+export TAPE=/dev/rmt0
+export VERSION=2.1.0

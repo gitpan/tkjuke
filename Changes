@@ -67,3 +67,14 @@
 ***** 2.0.7, 2003/12/23
 
 1) Fix JukeboxSlot Checkbutton -onvalue for Tk804.025.
+
+
+***** 2.1.0, 2004/02/29
+
+1) Add the mtx <=> atape compatibility layer for AIX.
+2) Add a SIGHHUP handler to tkjuke that takes inventory of the jukebox and
+   updates its display.  Used by unattended backup scripts to keep the
+   display accurate as they manipulate the device. The slave's PID is kept
+   in /tmp/tkjuke-slave.pid.
+
+
