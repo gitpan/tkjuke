@@ -224,8 +224,11 @@ sub status {
     $vt = '' unless $vt;
     trim \$vt;
     $se = $slots{$se}->[0] if defined $se;
+    if( $dstate eq 'Abnormal' ) {
+      $dstate = 'Normal';
+      $vt = '';
+    }
     $full = ( $full eq 'Yes' and $dstate eq 'Normal' ) ? "Full (Storage Element $se Loaded):VolumeTag = $vt" : 'Empty';
-    $full = $dstate if $dstate eq 'Abnormal';
     print "Data Transfer Element $ord:$full\n";
   }
 
@@ -240,8 +243,11 @@ sub status {
     $se = $slots{$se}->[0] if defined $se;
     my $mail_slot = $s =~ /Import.Export/;
     $mail_slot = $mail_slot ? ' IMPORT/EXPORT' : '';
+    if( $sstate eq 'Abnormal' ) {
+      $sstate = 'Normal';
+      $vt = '';
+    }
     $full = ( $full eq 'Yes' and $sstate eq 'Normal' ) ? "Full :VolumeTag=$vt" : 'Empty';
-    $full = $sstate if $sstate eq 'Abnormal';
     print "      Storage Element $ord${mail_slot}:$full\n";
   }
 

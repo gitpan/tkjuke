@@ -47,9 +47,11 @@ juke loaded                           - print barcode(s) of loaded media
 
 juke barcodes [bc1 bc2 ... bc-#slots] - print or set jukebox barcode list
 
+juke refresh-tkjuke                   - send SIGHUP to update tkjuke's display
+
 
 Steve Lidie
 Lehigh University Computing Center
 sol0@lehigh.edu
 
-2003/12/23
+2004/03/12

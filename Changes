@@ -49,7 +49,7 @@
 4) Tested with mtx 1.2.17.
 
 
-***** 2.0.1, 2003/0707
+***** 2.0.1, 2003/07/07
 
 1) Turn tkjuke into a master/slave program, embedding slave tkjuke windows
    inside the master's NoteBook widget.
@@ -75,6 +75,13 @@
 2) Add a SIGHHUP handler to tkjuke that takes inventory of the jukebox and
    updates its display.  Used by unattended backup scripts to keep the
    display accurate as they manipulate the device. The slave's PID is kept
-   in /tmp/tkjuke-slave.pid.
+   in /tmp/tkjuke-slave-${device}.pid.
 
 
+***** 2.1.1, 2004/03/10
+
+1) atape-mtx: if a storage element is abnormal and full, no barcode is
+   available, so just mark full rather than abnormal so tkjuke can move it.
+   Do the same for data transfer elements.
+2) Add a new juke command "refresh-tkjuke" that sends a SIGHUP to tkjuke.
+   juke uses this new feature to refresh tkjuke when media is moved.

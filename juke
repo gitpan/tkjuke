@@ -9,13 +9,14 @@
 
 use lib 'JUKE_ROOT';
 use Fcntl;
+use File::Basename;
 use Jukebox;
 use SDBM_File;
 use Socket;
 use Sys::Hostname;
 
 use subs qw/
-    barcodes bcenter bcremove config customize fini init main status usage
+    barcodes bcenter bcremove config customize fini init main refresh status usage
 /;
 use strict;
 
@@ -267,20 +268,24 @@ sub main {
 
   CASE:
     {
+
 	/^help$/ and do {
 	    print STDOUT usage;
 	    last CASE;
 	};
+
 	/^config$/ and do {
 	  print "do config\n";
 	    print STDOUT config;
 	    last CASE;
 	};
+
 	/^status$/ and do {
 	    die "Usage: juke $ARGV[0]" unless $#ARGV == 0;
 	    print STDOUT status;
 	    last CASE;
 	};
+
 	/^load$/ and do {
 	    die "Usage: juke [invert] $ARGV[0] slot# [drive#]" if $#ARGV > 2;
 	    sys "$mtx $invert @ARGV 2>&1";
@@ -295,8 +300,10 @@ sub main {
 	    }
 
 	    &$wait_load;
+	    refresh;
 	    last CASE;
 	};
+
         /^unload$/ and do {
             die "Usage: juke [invert] $ARGV[0] [slot#] [drive#]" if $#ARGV > 2;
 
@@ -323,9 +330,10 @@ sub main {
 		bcremove $hostname, $JUKE_CONFIG{CHANGER}, $dte, $se_source;
 		bcenter "$hostname:$JUKE_CONFIG{CHANGER}\:\:$se_destination", $bc;
 	    }
-
+	    refresh;
             last CASE;
         };
+
 	/^first|last|next|previous$/ and do {
 	    die "Usage: juke $ARGV[0] [drive#]" if $#ARGV > 1;
 
@@ -384,9 +392,10 @@ sub main {
 	    }
 
 	    &$wait_load;
-
+	    refresh;
 	    last CASE;
 	};
+
 	/^transfer$/ and do {
 	    die "Usage: juke [eepos eepos#] $ARGV[0] src-slot# dest-slot#"
 		if $#ARGV != 2;
@@ -403,8 +412,10 @@ sub main {
 		    bcremove $hostname, $JUKE_CONFIG{CHANGER}, '', $ARGV[1];
 		}
 	    }
+	    refresh;
 	    last CASE;
 	};
+
 	/^loaded$/ and do {
 	    my (@status) = status;
 	    foreach (@status) {
@@ -416,14 +427,34 @@ sub main {
 	    print "\n";
 	    last CASE;
 	};
+
 	/^barcodes$/ and do {
 	    barcodes;
 	    last CASE;
 	};
+
+	/^refresh-tkjuke$/ and do {
+	    refresh;
+	    last CASE;
+	};
+
         die "Unrecognized juke command '$_'.\n";
     } # casend
 
 } # end main
+
+sub refresh {
+
+    # sys "/bin/kill -HUP `/bin/cat /tmp/tkjuke-slave-sch0.pid`";
+
+    my $pidfile = '/tmp/tkjuke-slave-' . basename( $JUKE_CONFIG{CHANGER} ) . '.pid';
+    if( open PID, $pidfile ) {
+	chomp( my $pid = <PID> );
+	close PID;
+	kill 1, $pid if $pid;
+    }
+
+} # end refresh
 
 sub status {
 
@@ -517,6 +548,8 @@ juke V${JUKE_CONFIG{VERSION}} usage:
  juke loaded                            - print barcode(s) of loaded media
 
  juke barcodes [pathname | SE# barcode] - print or set jukebox barcode list
+
+ juke refresh-tkjuke                    - send SIGHUP to update tkjuke's display
 
 USAGE
 
