@@ -1,0 +1,46 @@
+
+The "juke" command provides a simplified interface to the jukebox
+control program "mtx".  Once installed and configured, manipulating
+the jukebox is totally consistent among various computers.  Besides
+providing a simplified and consistent operator interface, "juke" can
+also simulate barcodes for jukeboxes lacking an actual barcode reader.
+It does this by consulting a file that maps barcodes and jukebox slots.
+
+"mtx" is available at sourceforge.net, and is presumed already installed.
+
+In "mtx"/"juke" lingo, a jukebox is a physical device consisting of one
+or more Data Transfer Elements (DTE) and one or more Storage Elements
+(SE).  Think of a DTE as the hardware that reads/writes storage media,
+perhaps magnetic tapes or optical disks.  An SE stores media until its
+loaded into a DTE.  A mail slot is a special SE used to add or remove
+(bump) media from the jukebox without having to open the jukebox up,
+as is required with a simple stacker device.
+
+"tkjuke" is a GUI for running a jukebox in a windowed environment.
+
+"juke" provides a command set suitable for an operator.  Briefly, here
+is what "juke" can do:
+
+juke help                             - print this information
+
+juke status                           - print jukebox status
+ 
+juke first                 [DTE#]     - unload current media, load first
+juke last                  [DTE#]     - unload current media, load last
+juke next                  [DTE#]     - unload current media, load next
+juke previous              [DTE#]     - unload current media, load previous
+
+juke [invert] load    SE#  [DTE#]     - load media from jukebox, maybe inverted
+juke [invert] unload [SE#] [DTE#]     - return media to jukebox, maybe inverted
+
+juke [eepos eepos#] transfer SE# SE#  - transfer media or bump mail slot
+
+juke loaded                           - print barcode of loaded media
+
+juke barcodes [bc1 bc2 ... bc-#slots] - print or set jukebox barcode list
+
+Steve Lidie
+Lehigh University Computing Center
+sol0@lehigh.edu
+
+2003/06/02

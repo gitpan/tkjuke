@@ -1,0 +1,45 @@
+
+***** 0.0.6 -> 1.0.0
+
+1) Enhance barcode simulation.
+   Steve Lidie, sol0@lehigh.edu, 2002/06/12.
+
+   Current barcode simulation is OK for small auto-loaders whose media
+   content is rather static.  Implement a new barcode scheme using a 
+   Perl DBM file (NDBM?).  This would allow dynamic updates as "juke"
+   manipulates the hardware.  A storage media's fake barcode
+   information lasts from the time the media is loaded and the operator
+   enters the barcode until the media is unloaded.
+
+   ********************* DONE, SOL, 2002/07/03 *****************************
+
+   Implemented using a GDBM database in version 0.0.6.  Barcodes are set
+   either by clicking on a media slot in tkjuke, or the juke command line:
+   
+     juke filename
+     juke saddr1 barcode1 [ saddr2 barcode2 .... ]
+
+   If a filename is specified, each line is of the form 'saddr=barcode',
+   where 'barcode' is the barcode, and 'saddr' is the slot address:
+  
+      host:changer:slot
+
+   'slot' is required and is the slot number, 'host' defaults to the local
+   host and 'changer'is the default changer device name on 'host'.
+
+2) "juke loaded" must return a list of loaded barcodes.
+   Steve Lidie, sol0@lehigh.edu, 2002/06/12.
+
+   ********************* DONE, SOL, 2002/07/03 *****************************
+
+   Fixed in 0.0.6.
+
+***** TODO
+
+1) Are "-" legal barcode characters?  Fix the \w regex so
+   barcodes 1 slot-1 works.
+   Steve Lidie, sol0@lehigh.edu, 2002/07/02.
+
+
+
+

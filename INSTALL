@@ -1,0 +1,113 @@
+
+
+		   tkjuke Installation Instructions
+
+
+*****
+***** Prerequisites:
+*****
+
+This software requires Perl/Tk, and obviously, mtx.  
+
+- mtx
+
+Tested with mtx versions 1.2.9, 1.2.10 and 1.2.15.
+
+- Perl
+
+Perl is likely already installed on your system.  If not, you can
+fetch it from:
+
+	http://www.cpan.org/src/stable.tar.gz
+
+Briefly, installation goes like this:
+
+	tar -zxvpf stable.tar.gz
+	cd perl-5.8.0
+	sh Configure -des -Dprefix=/usr/local
+	make
+	make test
+	make install
+
+- Perl/Tk (using the perl executable from above in /usr/local/bin)
+
+Get it from:
+
+	http://mirrors.develooper.com/perl/backup.pause/authors/id/N/NI/NI-S/Tk800.024.tar.gz
+
+Briefly, installation goes like this:
+
+	tar -zxvpf Tk800.024.tar.gz
+	cd Tk800.024
+	/usr/local/bin/perl Makefile.PL
+	make
+	make test
+	make install
+
+*****
+***** Installation of tkjuke is a three step process:
+*****
+
+***** STEP 1
+
+In the first step you unpack the gzipped-and-tarred distribution, edit
+some shell variables in the file install.sh, and execute the install
+script. This copies the juke files to a destination directory while
+making some path name changes.
+
+  gunzip tkjuke-x.x.x.tar.gz
+  tar -xvpf tkjuke-x.x.x.tar
+  cd tkjuke-x.x.x
+  (edit install.sh)
+  sh install.sh
+
+*****
+***** For the second and third steps, you change to the
+***** destination directory and edit two files that
+***** define site-specific data.
+*****
+
+WARNING: perform the remaining two steps on the files in the
+destination directory only - do NOT edit files in the original
+distribution directory!
+
+  cd /PREFIX/tkjuke/x.x.x
+
+where PREFIX is the value of the environment variable you defined
+in install.sh from STEP 1.
+
+***** STEP 2
+
+For the second step, you define changer and media device names in the
+bash shell script "juke.config". These definitions serve two purposes:
+1) they can be used to define environment variables for other shell
+scripts, and 2) they are read by the Perl module "Jukebox.pm" so that
+Perl ("juke"/"tkjuke") has access to the same information.
+
+***** STEP 3
+
+In the third step you edit the Perl source code for "juke" itself.  YOU
+DO NOT NEED TO KNOW PERL TO DO THIS. Find the subroutine "customize" at the
+top of the file and examine/change the definitions for the Perl variables:
+
+$mt       defines a string of the form "mt -f /dev/tape", using values
+          from "juke.config".  NORMALLY, YOU DO NOT NEED TO MAKE A CHANGE.
+
+$mtx      defines a string of the form "mtx -f /dev/changer", using values
+          from "juke.config".  NORMALLY, YOU DO NOT NEED TO MAKE A CHANGE.
+
+$wait     defines a Perl subroutine that ensures the media is ready after it
+          has been loaded.  The code comments tell you what to do.
+
+*****
+***** Installation complete.
+*****
+
+OK, juke/tkjuke installation and configuration is complete.  Have the
+appropriate amount of fun.
+
+Steve Lidie
+Lehigh University Computing Center
+sol0@lehigh.edu
+
+2003/06/02

@@ -1,0 +1,9 @@
+export CHANGER=/hw/scsi/sc10d6l1
+export EEPOS_OPEN=0
+export EEPOS_SHUT=1
+export JUKE=JUKE_EXE
+export LOADERINFO=/usr/local/bin/loaderinfo
+export MT=/sbin/mt
+export MTX=/usr/local/bin/mtx
+export NRTAPE=/dev/rmt/tps10d6nrvc
+export TAPE=/dev/rmt/tps10d6vc

@@ -1,0 +1,613 @@
+#!PERL
+#
+# Provide a Perl/Tk graphical interface for the "mtx" helper command "juke".
+#
+# Many thanks to Eric Lee Green - I could not have written this without his
+# counseling.  Any bugs and/or misunderstandings are my own.
+#
+# Steve Lidie, Lehigh University Computing Center, 2002/06/01.
+# sol0@lehigh.edu
+#
+# Copyright (C) 2002 - 2003, S. O. Lidie.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the same terms as Perl itself.
+
+use lib 'JUKE_ROOT';
+use Jukebox;
+
+use Tk;
+use Tk::CollapsableFrame;
+use Tk::ExecuteCommand;
+use Tk::JukeboxDrive;
+use Tk::JukeboxSlot;
+use Tk::widgets qw/DialogBox Pane ROText/;
+
+use subs qw/
+    bccmd fini file get_drives get_slots help init main msgsys ok
+    sdbm_update sdbm_view synchronize
+/;
+use strict;
+
+# Global variables.
+
+our (
+     $bcdialog,			# barcode DialogBox widget
+     $dcount,			# drive count
+     $drives,			# media drives Pane
+     @drives,			# array of JukeboxDrive widgets
+     $dte,			# regex for and empty SE
+     $ec,			# ExecuteCommand widget reference
+     $empty,			# the empty slot string
+     $full,			# the full  slot string
+     $mcount,			# import/export "mail" count
+     $mw,			# MainWindow
+     $opmenu,			# popup operations Menu
+     $quit,			# application cleanup subroutine
+     $scount,			# slot count
+     $se,			# regex for an empty DTE
+     $slots,			# media slots pane
+     @slots,			# array of JukeboxSlot widgets
+);
+
+# Main.
+
+init;				# initialize
+main;				# main loop
+fini;				# finish
+
+# Subroutines.
+
+sub bccmd {
+
+    # This callback is invoked to set/change a media's barcode. We're
+    # called with a JukeBoxSlot widget reference.
+
+    my ($self) = @_;
+
+    my $slot = $self->cget(-slotnumber);
+    my $text = $self->cget(-barcode);
+    
+    my $l = $bcdialog->Subwidget('label');
+    $l->configure(
+        -text => "The barcode in SE $slot is '$text'. " .
+        "You may now enter a new barcode.",
+    );
+    my $e = $bcdialog->Subwidget('entry');
+    $e->delete(0, 'end');
+    $e->focusForce;
+
+    my $answer = $bcdialog->Show;
+    return if $answer =~ /Cancel/i;
+
+    if ($answer =~ /OK/i) {
+	msgsys "$JUKE barcodes $slot '" . $e->get . "'", 0;
+    } elsif ($answer =~ /Mark Empty/i) {
+	msgsys "$JUKE barcodes $slot '" . $empty  . "'", 0;
+    } elsif ($answer =~ /Mark Full/i) {
+	msgsys "$JUKE barcodes $slot '" . $full   . "'", 0;
+    }
+
+    synchronize;
+
+} # end bccmd
+
+sub fini {
+
+    &$quit;
+
+} # end fini
+
+sub get_drives {
+
+    # We get the drive numbers from the Checkbutton's -variable option. All
+    # the JukeboxDrive widgets have unique variables, which have a value of
+    # zero when unselected and a reference to the Tk::JukeboxDrive widget if
+    # selected.  Foreach selected Tk::JukeboxDrive widget, fetch and return
+    # its -drivenumber value.  Drive numbers start at ZERO and can be used to
+    # index into the @drives array.
+
+    my @d = grep { ${$_->Subwidget('check')->cget(-variable)} != 0  } @drives;
+    return  map  { $_->cget(-drivenumber) } @d;
+
+} # end get_drives
+
+sub get_slots {
+
+    # We get the slot numbers from the Checkbutton's -variable option. All
+    # the JukeboxSlot widgets have unique variables, which have a value of
+    # zero when unselected and a reference to the Tk::JukeboxSlot widget if
+    # selected.  Foreach selected Tk::JukeboxSlot widget, fetch and return
+    # its -slotnumber value.  Slot numbers start at ONE and can be used to
+    # index into the @slots array.
+
+    my @s = grep { ${$_->Subwidget('check')->cget(-variable)} != 0  } @slots;
+    return  map  { $_->cget(-slotnumber) } @s;
+
+} # end get_slots
+
+sub init {
+
+    $empty = '*  empty  *';	# representation of an empty SE
+    $full  = '*  full  *';	# representation of a  full  SE
+
+    $dte = '\^\.\.  DTE \d+';	# regex representation of an empty SE
+    $se  = 'SE \d+ \.\.v';	# regex representation of an empty DTE
+
+    $quit = sub {		# application cleanup subroutine
+	exit;
+    };
+
+    $mw = MainWindow->new;
+    chomp (my $hostname = `hostname`);
+    $mw->title("tkjuke : $hostname");
+
+    $mw->protocol('WM_DELETE_WINDOW' => \&$quit);
+    $mw->bind(    '<Control-Key-c>'  => \&$quit);
+
+    # Create the Menubar and all its menubuttons.
+
+    $mw->configure(-menu => my $menubar = $mw->Menu);
+    map {$menubar->cascade( -label => '~' . $_->[0], -menuitems => $_->[1] )}
+         ['File', file],
+         ['Help', help];
+
+    # Get the count of drives and slots, including import/export mail slots,
+    # then create the Scrolled Pane of dive slots.
+
+    my (@status) = sys "$JUKE status";
+    ($dcount, $scount, $mcount) = $status[0] =~
+	/(\d+) Drives, (\d+) Slots \( (\d+) /;
+
+    my $drives_frame = $mw->Frame->pack;
+    $drives = $drives_frame->Scrolled('Pane',
+        -borderwidth => 4,
+        -height      => 310,
+        -relief      => 'solid',
+        -scrollbars  => 'osow',
+        -sticky      => 'w',
+    );
+    $drives->pack(qw/-side left -fill x -expand 1/);
+
+    foreach my $drive (1 .. $dcount) {
+	push @drives, $drives->JukeboxDrive(
+            -drivenumber => $drive - 1,
+        )->pack(-side => 'left');
+    }
+
+    $drives[0]->Subwidget('check')->select if @drives == 1;
+
+    # Create the ROText widget containing data from "loaderinfo"
+    # and the scrolled Pane containing the media drives.  If only
+    # one drive, select it.
+
+    my $t = $drives_frame->ROText(qw/-height 4 -width 40/);
+    $t->pack(qw/-side right -padx 30/);
+
+    my (@loaderinfo) = sys "$LOADERINFO -f $CHANGER";
+    my $loaderinfo = join(' ', @loaderinfo);
+
+    $t->tagConfigure('fg', -foreground => 'blue');
+    for (@loaderinfo[0 .. 3]) {
+	my ($l, $v) = /(.*):(.*)/;
+	$t->insert('end', sprintf("%-15s: %-s\n", $l, $v), 'fg');
+    }
+
+    # Create the scrolled Pane containing the media slots, and possibly
+    # one or more import/export "mail" slots.  Clicking on a SE posts
+    # the $bcdialog widget to set/change the barcode.
+    
+    $slots = $mw->Scrolled('Pane',
+        -borderwidth => 4,
+        -height      => 300,
+        -relief      => 'solid',
+        -scrollbars  => 'osow',
+        -sticky      => 'w',
+        -width       => 600,
+    );
+    $slots->pack(qw/-fill x -expand 1/);
+    
+    foreach my $slot (1 .. $scount) {
+	push @slots, $slots->JukeboxSlot(
+	    -barcodecmd => \&bccmd,
+            -slotnumber => $slot,
+        )->pack(-side => 'left');
+    }
+
+    $bcdialog = $mw->DialogBox(
+        -title   => 'Set/Change Barcode',
+        -buttons => ['OK', 'Cancel', 'Mark Empty', 'Mark Full'],
+    );
+    $bcdialog->add('Label')->pack;
+    $bcdialog->add('Entry')->pack;
+
+    $mw->Frame(qw/-height 2 -bg black/)->pack(qw/-side top -fill x -expand 1/);
+
+    # Create the ExecuteCommand widget inside a CollapsableFrame.
+
+    my $cf = $mw->CollapsableFrame(qw/-title Details -width 600 -height 250/);
+    $cf->pack(qw/-side top -fill x -expand 1/);
+    my $colf = $cf->Subwidget('colf');
+    $cf->toggle;
+
+    $ec = $colf->ExecuteCommand(
+        -command    => '',
+        -entryWidth => 50,
+        -height     => 10,
+        -label      => '',
+        -text       => 'Execute',
+    )->pack(qw/-side top -fill x -expand 1/);
+
+    # Create the popup operations Menu and define a Button3 callback
+    # to post it.
+
+    my (@menuitems) = (
+        [qw/command ~Load          -command/ => \&lu          ],
+        [qw/command ~Unload        -command/ => \&lu          ],
+	'',
+        [qw/command ~Invert-Load   -command/ => \&lu          ],
+        [qw/command ~Invert-Unload -command/ => \&lu          ],
+        '',
+        [qw/command ~First         -command/ => \&flnp        ],
+        [qw/command ~Last          -command/ => \&flnp        ],
+        [qw/command ~Next          -command/ => \&flnp        ],
+        [qw/command ~Previous      -command/ => \&flnp        ],
+        '',
+        [qw/command ~Transfer      -command/ => \&transfer    ],
+        [qw/command ~Bump          -command/ => \&bump        ],
+        '',
+	[qw/cascade ~Barcodes -command/ => \&barcodes, -menuitems => [
+         ['command' => '~View Database',       -command => \&sdbm_view],
+         ['command' => '~Update Database ...', -command => \&sdbm_update],
+	]],
+        '',
+        [qw/command ~Refresh       -command/ => \&refresh     ],
+    );
+
+    $opmenu = $mw->Menu(
+        -menuitems => [@menuitems],
+	-tearoff   => 0,
+        -title     => 'tkjuke operations',
+    );
+
+    $mw->bind('<ButtonPress-3>' => [sub {
+	$opmenu->Popup(qw/-popover cursor -popanchor ne/);
+    }]);
+
+    # Disable menu items that the jukebox does not support.
+
+    my ($invertable, $can_transfer) = (0, 0);
+    $invertable   = 1 if $loaderinfo =~ /Invertable: Yes/;
+    $can_transfer = 1 if $loaderinfo =~ /Can Transfer: Yes/;
+
+    if (not $invertable) {
+	$opmenu->entryconfigure('Invert-Load',   -state => 'disabled');
+	$opmenu->entryconfigure('Invert-Unload', -state => 'disabled');
+    }
+    if (not $can_transfer) {
+	$opmenu->entryconfigure('Transfer',      -state => 'disabled');
+	$opmenu->entryconfigure('Bump',          -state => 'disabled');
+    }
+
+    # Populate the jukebox with initial drive, slot and barcode information.
+
+    synchronize;
+
+} # end init
+
+sub main {
+
+    MainLoop;
+    
+} # end main
+
+sub msgsys {
+
+    # Optionally post an "OK to continue" Dialog and execute a command.
+
+    my ($cmd, $wait_ack) = @_;
+
+    my $date = scalar localtime;
+    my $text = $ec->Subwidget('text')->Subwidget('scrolled');
+
+    if ($ec->Subwidget('doit')->cget(-text) eq 'Cancel') {
+	$text->insert('end', "$date BSY: $cmd\n");
+	$text->see('end');
+	$text->update;
+	return 0;
+    }
+
+    if ($wait_ack) {
+	my $ans = $mw->messageBox(
+            -font       => '9x15',
+            -text       => "Okay to execute:\n\n$cmd",
+            -title      => 'ExecuteCommand',
+            -type       => 'yesno',
+            -wraplength => '10i',
+        );
+	return unless $ans =~ /yes/i;
+    }
+
+    $date = scalar localtime;
+    $text->insert('end', "$date BEG: $cmd\n");
+    $text->see('end');
+    $text->update;
+
+    $ec->configure(-command => $cmd);
+    $ec->execute_command;
+    $ec->bell;
+
+    $date = scalar localtime;
+    $text->insert('end', "$date END: $cmd\n");
+    $text->see('end');
+    $text->update;
+    
+    return $ec->get_status;
+
+} # end msgsys
+
+sub ok {
+
+    return $mw->messageBox(-text => $_[0], -type => 'ok');
+
+} # end ok
+
+sub synchronize {
+
+    # Populate the jukebox with drive and slot widgets, and with barcode
+    # data, if available.  Do NOT change the "DTE" and "SE" strings
+    # without a coordinated change to the variables $dte and $se!
+
+    my $date = scalar localtime;
+    my $text = $ec->Subwidget('text')->Subwidget('scrolled');
+
+    if ($ec->Subwidget('doit')->cget(-text) eq 'Cancel') {
+	$text->insert('end', "$date BSY: cannot synchronize\n");
+	$text->see('end');
+	$text->update;
+	return 0;
+    }
+
+    my (@status) = sys "$JUKE status";
+    chomp @status;
+
+    # Media drives are in $status[1]           .. $status[$dcount].
+    # Media slots  are in $status[$dcount + 1] .. $status[$#status].
+
+    my ($o, $ef, $num, $barcode, %loaded);
+
+    # Update all the drive widgets.
+
+    $o = 0;
+    foreach my $s (@status[1 .. $dcount]) {
+
+	($ef)      = $s =~ /:(\w+)?/;
+	($num)     = $s =~ /Transfer Element (\d+)/;
+	($barcode) = $s =~ /VolumeTag = (\w+)/;
+	if (defined($barcode)) {
+	    $loaded{$barcode} = $num;
+	} else {
+	    $barcode = $empty if $ef eq 'Empty';
+	    $barcode = "  SE $1 ..v" if $s =~ /(\d+) Loaded/;
+	}
+
+	$drives[$o]->configure(-barcode => $barcode);
+	$o++;
+
+    } # forend
+
+    # Update all the slot widgets, including any mail slots.
+
+    $o = 0;
+    foreach my $s (@status[$dcount + 1 .. $#status]) {
+
+	if ($s =~ m!IMPORT/EXPORT!) {
+	    $s =~ m!:(\w+)!;
+	    if (not defined $slots[$o]->cget(-mail)) {
+		$slots[$o]->configure(-mail => 'shut');
+		$slots[$o]->Subwidget('button')->configure(
+                    -relief => 'raised',
+                    -state  => 'active',
+                );
+	    }
+	    $slots[$o]->Subwidget('button')->configure(-text => 
+                $slots[$o]->cget(-mail));
+	}
+
+	($ef)      = $s =~ /:(\w+)?/;
+	($barcode) = $s =~ /VolumeTag=(.*)/;
+	if (defined($barcode) and exists $loaded{$barcode}) {
+	    $barcode = "^..  DTE $loaded{$barcode}  ";
+	}
+	if (not $barcode) {
+	    $barcode = ($ef eq 'Full') ?  $full : $empty;
+	};
+
+	$slots[$o]->configure(-barcode => $barcode);
+	$o++;
+
+    } # forend
+
+} # end synchronize
+
+# Menu related subroutines.
+
+sub bump {
+
+    # A bump operation either opens or closes a mail slot.  In mtx
+    # speak, a bump is a transfer with the same source and destination
+    # slots, and EEPOS specifying either open or close (often 0 and 1,
+    # respectively, but not always).
+
+    my @snum = get_slots;	# get selected slots
+    if ($#snum != 0) {
+	return ok "Please select one mail SE.";
+    }
+
+    my $ismail = $slots[$snum[0] - 1]->cget(-mail);
+
+    if (not defined $ismail) {
+	return ok "Please select one mail SE.";
+    }
+
+    my $eepos = ($ismail eq 'shut') ? $EEPOS_OPEN : $EEPOS_SHUT;
+    my (@status) = msgsys "$JUKE eepos $eepos transfer $snum[0] $snum[0]", 1;
+    $slots[$snum[0] - 1]->toggle_mail_slot if $status[0] == 0;
+
+    synchronize;
+
+} # end bump
+
+sub file {
+
+    [
+      [qw/command ~Quit  -accelerator Ctrl-q -command/ => \&$quit],
+    ];
+
+} # end file
+
+sub flnp {
+
+    # first/last/next/previous.  Fetch the operation from the text label
+    # of the active menu item.
+
+    my $label = $opmenu->entrycget('active', -label);
+
+    my @dnum = get_drives;	# get selected drives
+
+    if ($#dnum != 0) {
+	return ok "Please select one DTE.";
+    }
+
+    msgsys "$JUKE ". lc($label) . " $dnum[0]", 1;
+
+    synchronize;
+
+} # end flnp
+
+sub help {
+
+    [
+      ['command', 'Help',    -command => \&usage  ],
+      ['command', 'Version', -command => \&version],
+    ];
+
+} # end help
+
+sub lu {
+
+    # Load or unload a media.  Fetch the operation from the text label
+    # of the active menu item, and possibly "invert" as well.
+
+    my $label = $opmenu->entrycget('active', -label);
+    my $invert = '';
+
+    if ($label =~ /invert/i) {
+	$invert = 'invert';
+	$label =~ s/(Invert\-)//;
+    }
+
+    my @dnum = get_drives;	# get selected drives
+    my @snum = get_slots;	# get selected slots
+
+    if ($#dnum != 0 or $#snum != 0) {
+	return ok "Please select one DTE and one SE.";
+    }
+
+    $label = lc $label;
+
+    my ($dbc, $sbc);		# DTE barcode, SE barcode
+    $dbc = $drives[$dnum[0]]->cget(-barcode);
+    $sbc = $slots[$snum[0] - 1]->cget(-barcode);
+
+    if ($label eq 'load') {
+	if ( ($dbc ne $empty and $dbc !~ /$se/ ) or
+             ($sbc eq $empty  or $sbc =~ /$dte/) ) {
+	    return ok "Please select an empty DTE and a full SE.";
+	}
+    }
+    if ($label eq 'unload') {
+	if ( ($dbc eq $empty) or
+             ($sbc ne $empty and $sbc !~ /$dte/) ) {
+	    return ok "Please select a full DTE and an empty SE.";
+	}
+    }
+
+    msgsys "$JUKE $invert $label $snum[0] $dnum[0]", 1;
+
+    synchronize;
+
+} # end lu
+
+sub refresh {
+
+    msgsys "$JUKE status", 0;
+
+    synchronize;
+
+} # end refresh
+
+sub sdbm_update {
+
+    my $file = $mw->getOpenFile;
+    return unless defined $file;
+    msgsys "$JUKE barcodes $file", 1;
+
+} # end sdbm_update
+
+sub sdbm_view {
+
+    msgsys "$JUKE barcodes", 0;
+
+} # end sdbm_view
+
+sub transfer {
+
+    # A transfer operation moves media between slots.  We need two
+    # slots selected, one empty and one full;
+
+    my @snum = get_slots;	# get selected slots
+    if ($#snum != 1) {
+	return ok "Please select two SEs, one full (source), one empty (destination).";
+    }
+
+    my ($bc1, $bc2, $src, $dest);
+    $bc1 = $slots[$snum[0] - 1]->cget(-barcode);
+    $bc2 = $slots[$snum[1] - 1]->cget(-barcode);
+
+    # A  full  slot is equivalent to $full  or a barcode.
+    # An empty slot is equivalent to $empty or $dte.
+
+    if (
+        ($bc1 eq $bc2)
+               or 
+        ( (($bc1 eq $empty or $bc1 =~ /$dte/) and ($bc2 eq $empty or $bc2 =~ /$dte/))
+               or
+          (($bc1 eq $full                   ) and ($bc2 eq $full                   )) )
+       ) {
+	return ok "Please select a full (source) SE and an empty (destination) SE.";
+    }
+
+    if ($bc1 eq $empty or $bc1 =~ /$dte/) {
+	($dest, $src) = ($snum[0], $snum[1]);
+    } else {
+	($src, $dest) = ($snum[0], $snum[1]);
+    }
+
+    msgsys "$JUKE transfer $src $dest", 1;
+
+    synchronize;
+
+} # end transfer
+
+sub usage {
+
+    return ok "Select the DTE(s) and SE(s) of interest, then right click to see a menu of possible operations.\n\nDouble-clicking the left button over an SE's barcode posts a dialog and allows you to set or change it.";
+
+} # end usage
+
+sub version {
+
+    return ok "tkjuke version $Jukebox::VERSION";
+
+} # end version
