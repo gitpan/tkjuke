@@ -2,8 +2,27 @@
 #
 # Provide a Perl/Tk graphical interface for the "mtx" helper command "juke".
 #
+# tkjuke runs in either master or slave mode.  As a master, tkjuke displays
+# one or more tkjuke windows from the local and/or remote tkjukeboxes in tabs
+# of a NoteBook widget. When an operator wants to manipulate a jukebox, she 
+# tells the master to contact the requisite computer and start tkjuke in
+# slave mode. The slave's window becomes embedded in a NoteBook tab on the
+# master.
+#
+# When tkjuke is invoked with no command line argument, it becomes a master.
+# The master also reads the file tkjuke.config for the list of jukeboxes
+# under its control.
+#
+# When tkjuke is supplied a single argument, it's a string representation
+# of a Tk hexadecimal window ID within which the slave should embed itself.
+#
+# Communication is via password-less ssh with X11 forwarding enabled.  For
+# simplicity, we assume OpenSSH, so as to have complete and known control
+# over the command line arguments.
+#
 # Many thanks to Eric Lee Green - I could not have written this without his
-# counseling.  Any bugs and/or misunderstandings are my own.
+# counseling.  Any bugs and/or misunderstandings concerning jukebox operations
+# are my own.
 #
 # Steve Lidie, Lehigh University Computing Center, 2002/06/01.
 # sol0@lehigh.edu
@@ -15,17 +34,18 @@
 
 use lib 'JUKE_ROOT';
 use Jukebox;
+use Proc::ProcessTable;
 
 use Tk;
 use Tk::CollapsableFrame;
 use Tk::ExecuteCommand;
 use Tk::JukeboxDrive;
 use Tk::JukeboxSlot;
-use Tk::widgets qw/DialogBox Pane ROText/;
+use Tk::widgets qw/DialogBox LabEntry NoteBook Pane ROText/;
 
 use subs qw/
-    bccmd fini file get_drives get_slots help init main msgsys ok
-    sdbm_update sdbm_view synchronize
+    bccmd discon fini file get_drives get_slots help init main master
+    msgsys ok sdbm_update sdbm_view slave start_slave synchronize
 /;
 use strict;
 
@@ -41,16 +61,20 @@ our (
      $empty,			# the empty slot string
      $full,			# the full  slot string
      $mcount,			# import/export "mail" count
-     $mw,			# MainWindow
+     $mw,			# slave's MainWindow
+     $mw_master,		# master's MainWindow
+     $nb,                       # NoteBook
      $opmenu,			# popup operations Menu
+     %pages,                    # names of active NoteBook pages
      $quit,			# application cleanup subroutine
      $scount,			# slot count
      $se,			# regex for an empty DTE
+     $slave,                    # undef = master, else window ID
      $slots,			# media slots pane
      @slots,			# array of JukeboxSlot widgets
 );
 
-# Main.
+# Main. 
 
 init;				# initialize
 main;				# main loop
@@ -81,16 +105,32 @@ sub bccmd {
     return if $answer =~ /Cancel/i;
 
     if ($answer =~ /OK/i) {
-	msgsys "$JUKE barcodes $slot '" . $e->get . "'", 0;
+	msgsys "$JUKE_CONFIG{JUKE} barcodes $slot '" . $e->get . "'", 0;
     } elsif ($answer =~ /Mark Empty/i) {
-	msgsys "$JUKE barcodes $slot '" . $empty  . "'", 0;
+	msgsys "$JUKE_CONFIG{JUKE} barcodes $slot '" . $empty  . "'", 0;
     } elsif ($answer =~ /Mark Full/i) {
-	msgsys "$JUKE barcodes $slot '" . $full   . "'", 0;
+	msgsys "$JUKE_CONFIG{JUKE} barcodes $slot '" . $full   . "'", 0;
     }
 
     synchronize;
 
 } # end bccmd
+
+sub discon {
+
+    # Disconnect a jukebox by killing the ssh process and deleting the NoteBook page.
+
+    my ($page) = @_;
+
+    my $pt = Proc::ProcessTable->new;
+    foreach my $p ( @{$pt->table} ){
+	kill 15, $p->pid if $p->cmndline =~ /ssh -p \d+ -X -f $page /;
+    }
+
+    $nb->delete($page);
+    delete $pages{$page};
+
+} # end discon
 
 sub fini {
 
@@ -128,34 +168,170 @@ sub get_slots {
 
 sub init {
 
+    $slave = $ARGV[0];		# undef for a master
+
+    $quit = sub {		# application cleanup subroutine
+
+	# Run Disconnect callback on all NoteBook pages.
+
+	foreach (keys %pages) {
+	    discon $_;
+	}
+
+	exit;
+    };
+
+    $slave ? slave : master;
+
+} # end init
+
+sub main {
+
+    MainLoop;
+    
+} # end main
+
+sub master {
+
+    $SIG{HUP}  = 'ignore';
+    $SIG{QUIT} = 'ignore';
+
+    $mw_master = MainWindow->new;
+    $mw_master->title('JukeBox Controller');
+
+    $mw_master->configure(-menu => my $menubar = $mw_master->Menu);
+    map {$menubar->cascade( -label => '~' . $_->[0], -menuitems => $_->[1] )}
+         ['File',    file],
+         ['Help',    help];
+
+    $nb = $mw_master->NoteBook(-dynamicgeometry => 1)->pack;
+    my $nb_con = $nb->add('Connect', -label => 'Connect');
+    my $nb_con_l = $nb_con->Listbox(qw/-width 65 -font 9x15bold/)->pack;
+    my $nb_con_f = $nb_con->Frame->pack;
+    my $tkjuke;
+    my $e;
+    foreach my $item (['tkjuke', \$tkjuke]) {
+        my $l = $item->[0] . ':';
+        my $le = $nb_con_f->LabEntry(
+            -label        => ' ' x (8 - length $l) . $l,
+            -labelPack    => [qw/-side left -anchor w/],
+            -labelFont    => '9x15bold',
+            -textvariable => $item->[1],
+            -width        => 35,
+        );
+        $le->pack(qw/ -fill x -expand 1/);
+	$e = $le->Subwidget('entry') if $l eq 'tkjuke:';
+    }
+
+    $nb->pageconfigure('Connect', -raisecmd => sub {$e->focus});
+
+    $nb_con_f->Button(
+        -text    => 'Connect',
+        -command => [\&start_slave, \$tkjuke],
+    )->pack;
+
+    open(T, "JUKE_ROOT/tkjuke.config") or warn "Cannot open JUKE_ROOT/tkjuke.config: $!";
+    my @auto;
+    while ($_ = <T>) {
+	next if /^#/ or /^$/;
+	chomp;
+	s/auto-connect\s*=\s*(\d+)//;
+	my $a = $1 == 1 ? 1 : 0;
+	s/\s*tkjuke\s*=\s*//;
+	s/"//g;
+	s/\t/ /g;
+	push @auto, $_ if $a;
+	$nb_con_l->insert('end', $_);
+    }
+    close T;
+
+    foreach $tkjuke (@auto) {
+	start_slave \$tkjuke;
+        $mw_master->update;
+    }
+
+    $nb_con_l->bind('<Double-ButtonRelease-1>' =>
+        sub {
+	    my ($l) = @_;
+	    $tkjuke = $l->get('active');
+	    start_slave \$tkjuke;	
+	}
+    );
+
+} # end master
+
+sub msgsys {
+
+    # Optionally post an "OK to continue" Dialog and execute a command.
+
+    my ($cmd, $wait_ack) = @_;
+
+    my $date = scalar localtime;
+    my $text = $ec->Subwidget('text')->Subwidget('scrolled');
+
+    if ($ec->Subwidget('doit')->cget(-text) eq 'Cancel') {
+	$text->insert('end', "$date BSY: $cmd\n");
+	$text->see('end');
+	$text->update;
+	return 0;
+    }
+
+    if ($wait_ack) {
+	my $ans = $mw->messageBox(
+            -font       => '9x15',
+            -text       => "Okay to execute:\n\n$cmd",
+            -title      => 'ExecuteCommand',
+            -type       => 'yesno',
+            -wraplength => '10i',
+        );
+	return unless $ans =~ /yes/i;
+    }
+
+    $date = scalar localtime;
+    $text->insert('end', "$date BEG: $cmd\n");
+    $text->see('end');
+    $text->update;
+
+    $ec->configure(-command => $cmd);
+    $ec->execute_command;
+    $ec->bell;
+
+    $date = scalar localtime;
+    $text->insert('end', "$date END: $cmd\n");
+    $text->see('end');
+    $text->update;
+    
+    return $ec->get_status;
+
+} # end msgsys
+
+sub ok {
+
+    return $mw_master->messageBox(
+        -text       => $_[1],
+        -title      => $_[0],
+        -type       => 'ok',
+        -wraplength => '6i',
+    );
+
+} # end ok
+
+sub slave {
+
+    my $slave_mw = MainWindow->new;
+    $slave_mw->withdraw;
+    $mw = $slave_mw->Toplevel(-use => hex $slave);
+
     $empty = '*  empty  *';	# representation of an empty SE
     $full  = '*  full  *';	# representation of a  full  SE
 
     $dte = '\^\.\.  DTE \d+';	# regex representation of an empty SE
     $se  = 'SE \d+ \.\.v';	# regex representation of an empty DTE
 
-    $quit = sub {		# application cleanup subroutine
-	exit;
-    };
-
-    $mw = MainWindow->new;
-    chomp (my $hostname = `hostname`);
-    $mw->title("tkjuke : $hostname");
-
-    $mw->protocol('WM_DELETE_WINDOW' => \&$quit);
-    $mw->bind(    '<Control-Key-c>'  => \&$quit);
-
-    # Create the Menubar and all its menubuttons.
-
-    $mw->configure(-menu => my $menubar = $mw->Menu);
-    map {$menubar->cascade( -label => '~' . $_->[0], -menuitems => $_->[1] )}
-         ['File', file],
-         ['Help', help];
-
     # Get the count of drives and slots, including import/export mail slots,
     # then create the Scrolled Pane of dive slots.
 
-    my (@status) = sys "$JUKE status";
+    my (@status) = sys "$JUKE_CONFIG{JUKE} status";
     ($dcount, $scount, $mcount) = $status[0] =~
 	/(\d+) Drives, (\d+) Slots \( (\d+) /;
 
@@ -184,7 +360,7 @@ sub init {
     my $t = $drives_frame->ROText(qw/-height 4 -width 40/);
     $t->pack(qw/-side right -padx 30/);
 
-    my (@loaderinfo) = sys "$LOADERINFO -f $CHANGER";
+    my (@loaderinfo) = sys "$JUKE_CONFIG{LOADERINFO} -f $JUKE_CONFIG{CHANGER}";
     my $loaderinfo = join(' ', @loaderinfo);
 
     $t->tagConfigure('fg', -foreground => 'blue');
@@ -237,6 +413,7 @@ sub init {
         -label      => '',
         -text       => 'Execute',
     )->pack(qw/-side top -fill x -expand 1/);
+    $ec->Subwidget('label')->packForget;
 
     # Create the popup operations Menu and define a Button3 callback
     # to post it.
@@ -293,64 +470,27 @@ sub init {
 
     synchronize;
 
-} # end init
+} # end slave
 
-sub main {
+sub start_slave {
 
-    MainLoop;
-    
-} # end main
+    my ($ssh_command) = @_;
 
-sub msgsys {
+    my $tkjuke = $$ssh_command;
+    my ($user, $host) = $tkjuke =~ /(\S+)\@(\S+)/;
+    $pages{"$user\@$host"} = 1;
+    my $nb_slave = $nb->add("$user\@$host", -label => "$user\@$host");
+    my $container = $nb_slave->Frame(-container => 1)->pack;
+    my $id = $container->id;
+    my $discon = $nb_slave->Button(
+        -text    => 'Disconnect',
+        -command => [\&discon, "$user\@$host"],
+    )->pack;
 
-    # Optionally post an "OK to continue" Dialog and execute a command.
+    system "$tkjuke '$id'";
+    warn "slave tkjuke failure: $?" if $?;
 
-    my ($cmd, $wait_ack) = @_;
-
-    my $date = scalar localtime;
-    my $text = $ec->Subwidget('text')->Subwidget('scrolled');
-
-    if ($ec->Subwidget('doit')->cget(-text) eq 'Cancel') {
-	$text->insert('end', "$date BSY: $cmd\n");
-	$text->see('end');
-	$text->update;
-	return 0;
-    }
-
-    if ($wait_ack) {
-	my $ans = $mw->messageBox(
-            -font       => '9x15',
-            -text       => "Okay to execute:\n\n$cmd",
-            -title      => 'ExecuteCommand',
-            -type       => 'yesno',
-            -wraplength => '10i',
-        );
-	return unless $ans =~ /yes/i;
-    }
-
-    $date = scalar localtime;
-    $text->insert('end', "$date BEG: $cmd\n");
-    $text->see('end');
-    $text->update;
-
-    $ec->configure(-command => $cmd);
-    $ec->execute_command;
-    $ec->bell;
-
-    $date = scalar localtime;
-    $text->insert('end', "$date END: $cmd\n");
-    $text->see('end');
-    $text->update;
-    
-    return $ec->get_status;
-
-} # end msgsys
-
-sub ok {
-
-    return $mw->messageBox(-text => $_[0], -type => 'ok');
-
-} # end ok
+} # end start_slave
 
 sub synchronize {
 
@@ -368,7 +508,7 @@ sub synchronize {
 	return 0;
     }
 
-    my (@status) = sys "$JUKE status";
+    my (@status) = sys "$JUKE_CONFIG{JUKE} status";
     chomp @status;
 
     # Media drives are in $status[1]           .. $status[$dcount].
@@ -441,17 +581,17 @@ sub bump {
 
     my @snum = get_slots;	# get selected slots
     if ($#snum != 0) {
-	return ok "Please select one mail SE.";
+	return ok 'Mail SE?', "Please select one mail SE.";
     }
 
     my $ismail = $slots[$snum[0] - 1]->cget(-mail);
 
     if (not defined $ismail) {
-	return ok "Please select one mail SE.";
+	return ok 'Mail SE?', "Please select one mail SE.";
     }
 
-    my $eepos = ($ismail eq 'shut') ? $EEPOS_OPEN : $EEPOS_SHUT;
-    my (@status) = msgsys "$JUKE eepos $eepos transfer $snum[0] $snum[0]", 1;
+    my $eepos = ($ismail eq 'shut') ? $JUKE_CONFIG{EEPOS_OPEN} : $JUKE_CONFIG{EEPOS_SHUT};
+    my (@status) = msgsys "$JUKE_CONFIG{JUKE} eepos $eepos transfer $snum[0] $snum[0]", 1;
     $slots[$snum[0] - 1]->toggle_mail_slot if $status[0] == 0;
 
     synchronize;
@@ -476,10 +616,10 @@ sub flnp {
     my @dnum = get_drives;	# get selected drives
 
     if ($#dnum != 0) {
-	return ok "Please select one DTE.";
+	return ok 'One DTE?', "Please select one DTE.";
     }
 
-    msgsys "$JUKE ". lc($label) . " $dnum[0]", 1;
+    msgsys "$JUKE_CONFIG{JUKE} ". lc($label) . " $dnum[0]", 1;
 
     synchronize;
 
@@ -488,8 +628,10 @@ sub flnp {
 sub help {
 
     [
-      ['command', 'Help',    -command => \&usage  ],
-      ['command', 'Version', -command => \&version],
+      ['command', 'Connecting to a jukebox', -command => \&usage_c],
+      ['command', 'Operating a jukebox',     -command => \&usage_m],
+      '-',
+      ['command', 'Version Information',     -command => \&version],
     ];
 
 } # end help
@@ -511,7 +653,7 @@ sub lu {
     my @snum = get_slots;	# get selected slots
 
     if ($#dnum != 0 or $#snum != 0) {
-	return ok "Please select one DTE and one SE.";
+	return ok 'DTE and SE?', "Please select one DTE and one SE.";
     }
 
     $label = lc $label;
@@ -523,17 +665,17 @@ sub lu {
     if ($label eq 'load') {
 	if ( ($dbc ne $empty and $dbc !~ /$se/ ) or
              ($sbc eq $empty  or $sbc =~ /$dte/) ) {
-	    return ok "Please select an empty DTE and a full SE.";
+	    return ok 'Empty DTE full SE?', "Please select an empty DTE and a full SE.";
 	}
     }
     if ($label eq 'unload') {
 	if ( ($dbc eq $empty) or
              ($sbc ne $empty and $sbc !~ /$dte/) ) {
-	    return ok "Please select a full DTE and an empty SE.";
+	    return ok 'Full DTE empty SE?', "Please select a full DTE and an empty SE.";
 	}
     }
 
-    msgsys "$JUKE $invert $label $snum[0] $dnum[0]", 1;
+    msgsys "$JUKE_CONFIG{JUKE} $invert $label $snum[0] $dnum[0]", 1;
 
     synchronize;
 
@@ -541,7 +683,7 @@ sub lu {
 
 sub refresh {
 
-    msgsys "$JUKE status", 0;
+    msgsys "$JUKE_CONFIG{JUKE} status", 0;
 
     synchronize;
 
@@ -551,13 +693,13 @@ sub sdbm_update {
 
     my $file = $mw->getOpenFile;
     return unless defined $file;
-    msgsys "$JUKE barcodes $file", 1;
+    msgsys "$JUKE_CONFIG{JUKE} barcodes $file", 1;
 
 } # end sdbm_update
 
 sub sdbm_view {
 
-    msgsys "$JUKE barcodes", 0;
+    msgsys "$JUKE_CONFIG{JUKE} barcodes", 0;
 
 } # end sdbm_view
 
@@ -568,7 +710,7 @@ sub transfer {
 
     my @snum = get_slots;	# get selected slots
     if ($#snum != 1) {
-	return ok "Please select two SEs, one full (source), one empty (destination).";
+	return ok 'Full SE empty SE?', "Please select two SEs, one full (source), one empty (destination).";
     }
 
     my ($bc1, $bc2, $src, $dest);
@@ -585,7 +727,7 @@ sub transfer {
                or
           (($bc1 eq $full                   ) and ($bc2 eq $full                   )) )
        ) {
-	return ok "Please select a full (source) SE and an empty (destination) SE.";
+	return ok 'Full SE empty SE?', "Please select a full (source) SE and an empty (destination) SE.";
     }
 
     if ($bc1 eq $empty or $bc1 =~ /$dte/) {
@@ -594,20 +736,26 @@ sub transfer {
 	($src, $dest) = ($snum[0], $snum[1]);
     }
 
-    msgsys "$JUKE transfer $src $dest", 1;
+    msgsys "$JUKE_CONFIG{JUKE} transfer $src $dest", 1;
 
     synchronize;
 
 } # end transfer
 
-sub usage {
+sub usage_c {
 
-    return ok "Select the DTE(s) and SE(s) of interest, then right click to see a menu of possible operations.\n\nDouble-clicking the left button over an SE's barcode posts a dialog and allows you to set or change it.";
+    return ok 'How to Connect', "Click the 'Connect' NoteBook tab.\n\nDouble-click a selection from the Listbox to connect to the specified jukebox. Or, manually enter the complete ssh command required to invoke a slave tkjuke, then click the 'Connect' Button.\n\nA new NoteBook tab appears, from which you can control the jukebox.";
 
-} # end usage
+} # end usage_c
+
+sub usage_m {
+
+    return ok 'Operating Instructions', "Click the NoteBook tab of the desired jukebox to bring it to the foreground.\n\nSelect the DTE(s) and SE(s) of interest, then right click to see a menu of possible operations.\n\nDouble-clicking the left button over an SE's barcode posts a dialog and allows you to set or change the barcode.";
+
+} # end usage_m
 
 sub version {
 
-    return ok "tkjuke version $Jukebox::VERSION";
+    return ok 'Version Information', "tkjuke $JUKE_CONFIG{VERSION}, Perl $], Tk $Tk::VERSION";
 
 } # end version

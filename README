@@ -34,6 +34,8 @@ have such a beast, I can only hope everything works in the real world.
 do:
 
 
+juke config                           - print juke.config
+
 juke status                           - print jukebox status
  
 juke first                 [DTE#]     - unload current media, load first
@@ -55,4 +57,5 @@ Steve Lidie
 Lehigh University Computing Center
 sol0@lehigh.edu
 
-2003/06/02
+2003/07/01
+

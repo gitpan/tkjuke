@@ -8,23 +8,13 @@ package Jukebox;
 
 use Exporter;
 use base qw/Exporter/;
-@EXPORT = qw/
-    $CHANGER $EEPOS_OPEN $EEPOS_SHUT $JUKE
-    $LOADERINFO $MT $MTX $NRTAPE sys $TAPE
-    $VERSION
-/;
+@EXPORT = qw/%JUKE_CONFIG sys/;
 
-our (
-     $CHANGER,
-     $EEPOS_OPEN,
-     $EEPOS_SHUT,
-     $JUKE,
-     $LOADERINFO,
-     $MT,
-     $MTX,
-     $NRTAPE,
-     $TAPE,
-     $VERSION,
+our (%JUKE_CONFIG);
+
+my (
+    $changer, $eepos_open, $eepos_shut, $juke, $loaderinfo,
+    $mt, $mtx, $nrtape, $tape, $version,
 );
 
 my $sconfig = 'JUKE_ROOT/juke.config';
@@ -35,19 +25,33 @@ if ( ! open S, $sconfig ) {
 my (@setup) = <S>;
 close S;
 
-
 my $setup = join ' ', @setup;
 
-($CHANGER)    = $setup =~ / CHANGER=(.*)/m;
-($EEPOS_OPEN) = $setup =~ / EEPOS_OPEN=(.*)/m;
-($EEPOS_SHUT) = $setup =~ / EEPOS_SHUT=(.*)/m;
-($JUKE)       = $setup =~ / JUKE=(.*)/m;
-($LOADERINFO) = $setup =~ / LOADERINFO=(.*)/m;
-($MT)         = $setup =~ / MT=(.*)/m;
-($MTX)        = $setup =~ / MTX=(.*)/m;
-($NRTAPE)     = $setup =~ / NRTAPE=(.*)/m;
-($TAPE)       = $setup =~ / TAPE=(.*)/m;
-($VERSION)    = $setup =~ / VERSION=(.*)/m;
+($changer)              =  $setup =~ / CHANGER=(.*)/m;
+($eepos_open)           =  $setup =~ / EEPOS_OPEN=(.*)/m;
+($eepos_shut)           =  $setup =~ / EEPOS_SHUT=(.*)/m;
+($eject_before_unload)  =  $setup =~ / EJECT_BEFORE_UNLOAD=(.*)/m;
+($juke)                 =  $setup =~ / JUKE=(.*)/m;
+($loaderinfo)           =  $setup =~ / LOADERINFO=(.*)/m;
+($mt)                   =  $setup =~ / MT=(.*)/m;
+($mtx)                  =  $setup =~ / MTX=(.*)/m;
+($nrtape)               =  $setup =~ / NRTAPE=(.*)/m;
+($tape)                 =  $setup =~ / TAPE=(.*)/m;
+($version)              =  $setup =~ / VERSION=(.*)/m;
+
+%JUKE_CONFIG = (
+    CHANGER             => $changer,
+    EEPOS_OPEN          => $eepos_open,
+    EEPOS_SHUT          => $eepos_shut,
+    EJECT_BEFORE_UNLOAD => $eject_before_unload,
+    JUKE                => $juke,
+    LOADERINFO          => $loaderinfo,
+    MT                  => $mt,
+    MTX                 => $mtx,
+    NRTAPE              => $nrtape,
+    TAPE                => $tape,
+    VERSION             => $version,
+);
 
 sub sys {
 

@@ -27,10 +27,12 @@ use SDBM_File;
 use Socket;
 use Sys::Hostname;
 
-use subs qw/barcodes bcenter bcremove customize fini init main status usage/;
+use subs qw/
+    barcodes bcenter bcremove config customize fini init main status usage
+/;
 use strict;
 
-our (%barcodes, $dte_count, $hostname, @mail, $mt, $mtx, $se_count, $wait);
+our (%barcodes, $dte_count, $hostname, @mail, $mt, $mtx, $se_count, $wait_load);
 
 init;
 main;
@@ -99,9 +101,9 @@ sub bcenter {
     } elsif (@toks == 3) {
 	($hn, $ch, $dte, $sl) = ($hostname, @toks);
     } elsif (@toks == 2) {
-	($hn, $ch, $dte, $sl) = ($hostname, $CHANGER, @toks);
+	($hn, $ch, $dte, $sl) = ($hostname, $JUKE_CONFIG{CHANGER}, @toks);
     } elsif (@toks == 1) {
-	($hn, $ch, $dte, $sl) = ($hostname, $CHANGER, '', @toks);
+	($hn, $ch, $dte, $sl) = ($hostname, $JUKE_CONFIG{CHANGER}, '', @toks);
     } else {
 	warn "Illegal barcode, syntax is host:device:dte:se=barcode: '$l=$bc'";
 	return;
@@ -139,6 +141,13 @@ sub bcremove {
 
 } # end bcremove
 
+sub config {
+
+    return map { sprintf("%20s = %s\n", $_, $JUKE_CONFIG{$_}) }
+        sort keys %JUKE_CONFIG;
+
+} # end config
+
 sub customize {
 
     # Configure the following variables for your site.  You may need to
@@ -154,30 +163,33 @@ sub customize {
 
     # Pathname for the "mt" command, plus, the rewind tape device name.
 
-    $mt = "$MT -f $TAPE";
+    $mt = "$JUKE_CONFIG{MT} -f $JUKE_CONFIG{TAPE}";
 
     # Pathname for the "mtx" command, plus, the changer device name.
 
-    $mtx = "$MTX -f $CHANGER";
+    $mtx = "$JUKE_CONFIG{MTX} -f $JUKE_CONFIG{CHANGER}";
     
     # After a media is loaded, there's a time period in which it's not ready,
     # due to mechanical delays, or perhaps because the media is rewinding. 
-    # $wait is a code reference to a subroutine that waits for the media to
-    # become ready, or dies with a timeout failure. The logic is often
+    # $wait_load is a code reference to a subroutine that waits for the media
+    # to become ready, or dies with a timeout failure. The logic is often
     # dependant upon the operating system and physical device, but two
-    # methods are shown below.  Most commonly, $wait1 suffices, but if a
-    # rewind returns an error even when the media is ready, try $wait2.
+    # methods are shown below.  Most commonly, $wait_load1 suffices, but if a
+    # rewind returns an error even when the media is ready, try $wait_load2.
+    #
+    # $wait_load1 works for RedHat Linux, $wait_load2 works for an LTO Ultrium
+    # library under IRIX.
 
-    my $wait1 = sub {
+    my $wait_load1 = sub {
 	for (my $n = 1; $n <= 100; $n++) {
 	    sleep 5;
 	    system "$mt rewind > /dev/null 2>&1";
 	    return if $? == 0;
 	}
 	die 'wait-media-load-complete timeout';
-    }; # end $wait1
+    }; # end $wait_load1
 
-    my $wait2 = sub {
+    my $wait_load2 = sub {
 	my $out = '';
 	for (my $n = 1; $n <= 100; $n++) {
 	    sleep 5;
@@ -189,14 +201,14 @@ sub customize {
 	    return if $out =~ /Media : READY/s;
 	}
 	die 'wait-media-load-complete timeout';
-    }; # end $wait2
+    }; # end $wait_load2
 
-    $wait = $wait1;
+    $wait_load = $wait_load1;
 
-# Uncomment the following line if the subroutine defined by $wait1
+# Uncomment the following line if the subroutine defined by $wait_load1
 # appears not to work.
 
-#    $wait = $wait2;
+#    $wait_load = $wait_load2;
 
 } # end customize
 
@@ -270,6 +282,10 @@ sub main {
 	    print STDOUT usage;
 	    last CASE;
 	};
+	/^config$/ and do {
+	    print STDOUT config;
+	    last CASE;
+	};
 	/^status$/ and do {
 	    die "Usage: juke $ARGV[0]" unless $#ARGV == 0;
 	    print STDOUT status;
@@ -282,13 +298,13 @@ sub main {
 
 	    # Update barcode of SE loaded into DTE.
 
-	    if (exists $barcodes{"$hostname:$CHANGER\:\:$ARGV[1]"}) {
-		my $bc = $barcodes{"$hostname:$CHANGER\:\:$ARGV[1]"};
-		bcremove $hostname, $CHANGER, '', $ARGV[1];
-		bcenter "$hostname:$CHANGER:$dte:$ARGV[1]", $bc;
+	    if (exists $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}\:\:$ARGV[1]"}) {
+		my $bc = $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}\:\:$ARGV[1]"};
+		bcremove $hostname, $JUKE_CONFIG{CHANGER}, '', $ARGV[1];
+		bcenter "$hostname:$JUKE_CONFIG{CHANGER}:$dte:$ARGV[1]", $bc;
 	    }
 
-	    &$wait;
+	    &$wait_load;
 	    last CASE;
 	};
         /^unload$/ and do {
@@ -304,15 +320,18 @@ sub main {
 	    
 	    # Get destination SE from STDERR.
 
+	    my $eject = $JUKE_CONFIG{EJECT_BEFORE_UNLOAD};
+	    sys "$mt $eject 2>&1" if $eject;
+
             (@out) = sys "$mtx $invert @ARGV 2>&1";
 	    ($se_destination) = $out[0] =~ /Storage Element (\d+)/;
 
 	    # Update barcode of SE unloaded from DTE.
 
-	    if (exists $barcodes{"$hostname:$CHANGER:$dte:$se_source"} and
+	    if (exists $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}:$dte:$se_source"} and
 		defined($bc) ) {
-		bcremove $hostname, $CHANGER, $dte, $se_source;
-		bcenter "$hostname:$CHANGER\:\:$se_destination", $bc;
+		bcremove $hostname, $JUKE_CONFIG{CHANGER}, $dte, $se_source;
+		bcenter "$hostname:$JUKE_CONFIG{CHANGER}\:\:$se_destination", $bc;
 	    }
 
             last CASE;
@@ -342,10 +361,10 @@ sub main {
 
 		# Update barcode of SE unloaded from DTE.
 
-		if (exists $barcodes{"$hostname:$CHANGER:$dte:$se_source"} and
+		if (exists $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}:$dte:$se_source"} and
 		    defined($bc) ) {
-		    bcremove $hostname, $CHANGER, $dte, $se_source;
-		    bcenter "$hostname:$CHANGER\:\:$se_destination", $bc;
+		    bcremove $hostname, $JUKE_CONFIG{CHANGER}, $dte, $se_source;
+		    bcenter "$hostname:$JUKE_CONFIG{CHANGER}\:\:$se_destination", $bc;
 		}
 
 	    }
@@ -365,13 +384,13 @@ sub main {
 	    ($se_source) = $out[1 + $dte] =~ /Element (\d+) Loaded/;
 	    ($bc) = $out[$dte_count + $se_source] =~ /VolumeTag=(.*)/;
 
-	    if (exists $barcodes{"$hostname:$CHANGER\:\:$se_source"}) {
-		my $bc = $barcodes{"$hostname:$CHANGER\:\:$se_source"};
-		bcremove $hostname, $CHANGER, '', $se_source;
-		bcenter "$hostname:$CHANGER:$dte:$se_source", $bc;
+	    if (exists $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}\:\:$se_source"}) {
+		my $bc = $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}\:\:$se_source"};
+		bcremove $hostname, $JUKE_CONFIG{CHANGER}, '', $se_source;
+		bcenter "$hostname:$JUKE_CONFIG{CHANGER}:$dte:$se_source", $bc;
 	    }
 
-	    &$wait;
+	    &$wait_load;
 
 	    last CASE;
 	};
@@ -380,15 +399,15 @@ sub main {
 		if $#ARGV != 2;
 	    sys "$mtx $eepos @ARGV 2>&1";
 	    if ($ARGV[1] != $ARGV[2]) {
-		if (exists $barcodes{"$hostname:$CHANGER\:\:$ARGV[1]"}) {
-		    my $bc = $barcodes{"$hostname:$CHANGER\:\:$ARGV[1]"};
-		    bcremove $hostname, $CHANGER, '', $ARGV[1];
-		    bcenter "$hostname:$CHANGER\:\:$ARGV[2]", $bc; 
+		if (exists $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}\:\:$ARGV[1]"}) {
+		    my $bc = $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}\:\:$ARGV[1]"};
+		    bcremove $hostname, $JUKE_CONFIG{CHANGER}, '', $ARGV[1];
+		    bcenter "$hostname:$JUKE_CONFIG{CHANGER}\:\:$ARGV[2]", $bc; 
 		}
 	    } else {		# remove barcode if bumped
-		if (exists $barcodes{"$hostname:$CHANGER\:\:$ARGV[1]"} and 
+		if (exists $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}\:\:$ARGV[1]"} and 
 		    $mail[$ARGV[1]]) {
-		    bcremove $hostname, $CHANGER, '', $ARGV[1];
+		    bcremove $hostname, $JUKE_CONFIG{CHANGER}, '', $ARGV[1];
 		}
 	    }
 	    last CASE;
@@ -430,7 +449,7 @@ sub status {
 	    my ($dte) = $1;
 	    if ($status[$i] =~ /(\d+) Loaded/) {
 		my ($se) = $1;
-		my $bc = $barcodes{"$hostname:$CHANGER:$dte:$se"};
+		my $bc = $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}:$dte:$se"};
 		if (defined $bc) {
 		    chomp $status[$i];
 		    if ($status[$i] =~ /VolumeTag/) {
@@ -443,7 +462,7 @@ sub status {
 	    }
         } else {
 	    my ($se) = $status[$i] =~ /Storage Element (\d+)/;
-	    my $bc = $barcodes{"$hostname:$CHANGER\:\:$se"};
+	    my $bc = $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}\:\:$se"};
 	    if (defined $bc) {
 		chomp $status[$i];
 		if ($status[$i] =~ /VolumeTag/) {
@@ -484,9 +503,11 @@ sub usage {
 
     return <<"USAGE";
 
-juke V${VERSION} usage:
+juke V${JUKE_CONFIG{VERSION}} usage:
 
- juke help                              - print this information
+ juke [help]                            - print this information
+
+ juke config                            - print juke.config
 
  juke status                            - print jukebox status
  

@@ -11,16 +11,16 @@ This software requires Perl/Tk, and obviously, mtx.
 
 - mtx
 
-Tested with mtx versions 1.2.9, 1.2.10 and 1.2.15.
+  Tested with mtx versions 1.2.9, 1.2.10 and 1.2.15.
 
 - Perl
 
-Perl is likely already installed on your system.  If not, you can
-fetch it from:
+  Perl is likely already installed on your system.  If not, you can
+  fetch it from:
 
 	http://www.cpan.org/src/stable.tar.gz
 
-Briefly, installation goes like this:
+  Briefly, installation goes like this:
 
 	tar -zxvpf stable.tar.gz
 	cd perl-5.8.0
@@ -31,14 +31,23 @@ Briefly, installation goes like this:
 
 - Perl/Tk (using the perl executable from above in /usr/local/bin)
 
-Get it from:
+  Get it from:
 
 	http://mirrors.develooper.com/perl/backup.pause/authors/id/N/NI/NI-S/Tk800.024.tar.gz
 
-Briefly, installation goes like this:
+  Briefly, installation goes like this:
 
 	tar -zxvpf Tk800.024.tar.gz
 	cd Tk800.024
+	/usr/local/bin/perl Makefile.PL
+	make
+	make test
+	make install
+
+- Proc::ProcessTable module
+
+  Fetch from CPAN and install in the standard manner:
+
 	/usr/local/bin/perl Makefile.PL
 	make
 	make test
@@ -59,24 +68,24 @@ make install
 ***** NOTE
 *****
 
-The "juke" variable $wait in the subroutine customize() defines an
-anonymous subroutine that ensures media is ready after it has been
-loaded into a DTE. It's value can be either $wait1 (Linux) or $wait2
-(IRIX). The basic idea is to status the drive until it is ready.
+  The "juke" variable $wait in the subroutine customize() defines an
+  anonymous subroutine that ensures media is ready after it has been
+  loaded into a DTE. It's value can be either $wait1 (Linux) or $wait2
+  (IRIX). The basic idea is to status the drive until it is ready.
 
-IFF you experience tape-not-ready errors, you must inspect this code
-and make appropriate changes. The code comments tell you what to do.
-Please, send any changes to sol0@lehigh.edu.
+  IFF you experience tape-not-ready errors, you must inspect this code
+  and make appropriate changes. The code comments tell you what to do.
+  Please, send any changes to sol0@lehigh.edu.
 
 *****
 ***** Installation complete.
 *****
 
-OK, juke/tkjuke installation and configuration is complete.  Have the
-appropriate amount of fun.
+  OK, juke/tkjuke installation and configuration is complete.  Have the
+  appropriate amount of fun.
 
 Steve Lidie
 Lehigh University Computing Center
 sol0@lehigh.edu
 
-2003/06/02
+2003/07/04

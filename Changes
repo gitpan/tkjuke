@@ -1,4 +1,14 @@
 
+***** TODO
+
+1) Are "-" legal barcode characters?  Fix the \w regex so
+   barcodes 1 slot-1 works.
+   Steve Lidie, sol0@lehigh.edu, 2002/07/02.
+
+
+***** Change Log
+
+
 ***** 0.0.6 -> 1.0.0
 
 1) Enhance barcode simulation.
@@ -34,12 +44,23 @@
 
    Fixed in 0.0.6.
 
-***** TODO
 
-1) Are "-" legal barcode characters?  Fix the \w regex so
-   barcodes 1 slot-1 works.
-   Steve Lidie, sol0@lehigh.edu, 2002/07/02.
+***** 1.0.7, 2003/06/27
+
+1) Add EJECT_BEFORE_UNLOAD configuration options to offline a tape prior to
+   unloading it.
+
+2) JukeBox.pm now exports its configuration option via the hash $JUKE_CONFIG
+   rather than individual variables.  The name of the old variables are the
+   hash keys.
+
+3) Add a juke "config" option to display the configuration options and values.
+
+4) Tested with mtx 1.2.17.
 
 
+***** 2.0.1, 2003/07017
 
+1) Turn tkjuke into a master/slave program, embedding slave tkjuke windows
+   inside the master's NoteBook widget.
 
