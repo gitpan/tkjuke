@@ -352,7 +352,7 @@ exec, command, fork, asynchronous, non-blocking, widget
 
 =head1 COPYRIGHT
 
-Copyright (C) 1999 - 2004 Stephen O. Lidie. All rights reserved.
+Copyright (C) 1999 - 2006 Stephen O. Lidie. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

@@ -26,6 +26,8 @@ use strict;
 
 # Global variables.
 
+our $ULT3582_TL_on_Linux = 1;	# kluge code until mtx/IBM get their act together
+
 our (
      $bcdialog,			# barcode DialogBox widget
      $dcount,			# drive count
@@ -306,6 +308,13 @@ sub ok {
 sub slave {
 
     my $slave_mw = MainWindow->new;
+#    $slave_mw->configure( -background, '#ffffe6e8e6e8' );
+#    $slave_mw->optionAdd( '*Background' => '#ffffe6e8e6e8' );
+#    $slave_mw->optionAdd( '*activeBackground' => 'lightsteelblue' );
+#    $slave_mw->optionAdd( '*activeForeground' => 'black' );
+#    $slave_mw->optionAdd( '*selectForeground' => 'black' );
+#    $slave_mw->optionAdd( '*selectBackground' => 'lightsteelblue' );
+
     if ($slave eq 'slave') {
 	$mw = $slave_mw;
     } else {
@@ -342,6 +351,7 @@ sub slave {
         -relief      => 'solid',
         -scrollbars  => 'osow',
         -sticky      => 'w',
+        -width       => 200,
     );
     $drives->pack(qw/-side left -fill x -expand 1/);
 
@@ -394,6 +404,13 @@ sub slave {
         )->pack(-side => 'left');
     }
 
+    if( $ULT3582_TL_on_Linux ) {
+ 	$slots[0]->configure( qw/ -background darkseagreen -foreground white / );
+	my $fake_mail_slot = $mw->Label( qw/ -text Mail -background darkseagreen -foreground white / );
+	$fake_mail_slot->place( -in => $slots[0], qw/ -x 1 -y 3 / );
+	$fake_mail_slot->raise;
+    }
+
     $bcdialog = $mw->DialogBox(
         -title   => 'Set/Change Barcode',
         -buttons => ['OK', 'Cancel', 'Mark Empty', 'Mark Full'],
@@ -401,7 +418,7 @@ sub slave {
     $bcdialog->add('Label')->pack;
     $bcdialog->add('Entry')->pack;
 
-    $mw->Frame(qw/-height 2 -bg black/)->pack(qw/-side top -fill x -expand 1/);
+    $mw->Frame(qw/-height 2 -background black/)->pack(qw/-side top -fill x -expand 1/);
 
     # Create the ExecuteCommand widget inside a CollapsableFrame.
 
@@ -460,6 +477,7 @@ sub slave {
     my ($invertable, $can_transfer) = (0, 0);
     $invertable   = 1 if $loaderinfo =~ /Invertable: Yes/;
     $can_transfer = 1 if $loaderinfo =~ /Can Transfer: Yes/;
+    $can_transfer = 1 if $ULT3582_TL_on_Linux;
 
     if (not $invertable) {
 	$opmenu->entryconfigure('Invert-Load',   -state => 'disabled');
@@ -533,7 +551,7 @@ sub synchronize {
 
 	($ef)      = $s =~ /:(\w+)?/;
 	($num)     = $s =~ /Transfer Element (\d+)/;
-	($barcode) = $s =~ /VolumeTag = (\w+)/;
+	($barcode) = $s =~ /VolumeTag = (.*)/;
 	if (defined($barcode)) {
 	    $loaded{$barcode} = $num;
 	} else {
@@ -834,7 +852,7 @@ To run a stand-alone slave:
 
 sol0@lehigh.edu
 
-Copyright (C) 2002 - 2004, Steve Lidie. All rights reserved.
+Copyright (C) 2002 - 2006, Steve Lidie. All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

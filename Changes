@@ -85,3 +85,51 @@
    Do the same for data transfer elements.
 2) Add a new juke command "refresh-tkjuke" that sends a SIGHUP to tkjuke.
    juke uses this new feature to refresh tkjuke when media is moved.
+
+***** 2.1.2, 2004/08/18
+
+1) Add kluge code for an IBM ULT3582-TL used with Redhat Linux. The jukebox
+   and mtx do not talk properly and mtx doesn't recognize that the device
+   can transfer and has a mail slot. Set the variable $ULT3582_TL_on_Linux
+   to 1 in tkjuke.  Then, from the jukebox front panel configure the mail
+   as a normal media slot rather than an import/export slot.  tkjuke will
+   annotate DTE slot 1 as the mail slot rather than the last slot as it
+   would normally.  No bump support is provided, however - the slot 1 
+   annotation is just sugar to appease the operators ;)
+
+2) Change the EJECT_BEFORE_UNLOAD default from 0 to "rewind" to prevent
+   media from being accidentally ejected if a drive is busy.
+
+***** 2.1.3, 2006/03/09
+
+1) Finally have a dual-drive jukebox - the same IBM ULT3582-TL as above.
+   Widen tkjuke's drive window so the optional scrollbar disappears.
+
+2) Make some juke system commands non-fatal: if tar gets a media error, it
+   unloads the bad tape, then invokes the media-change script. But the juke
+   code first tries to unload the tape before unloading the stacker, and on
+   some systems unloading an already unloaded drive gives an error, thus
+   the media change fails.  Make the drive-unload-before-a-cartridge-unload
+   non-fatal.
+
+3) As noted above, juke does some non-jukebox things, i.e. it touches the
+   physical drives to work around vagrancies noted above, e.g. sometimes
+   a tape must be rewound/unloaded before an library operation is permitted.
+   Since I only had access to single drive libraries, the install prodcedure
+   only configured once drive. Now the install procedure asks for multiple
+   drives, and juke maps DTE numbers to physical drives in its commands.
+
+4) Fixed a "one off" error due to multiple drives when plugging a loaded
+   DTE's barcode in an SE status line.
+
+When all was said and done, less than 20 lines of source code needed changing.
+Not bad considering I had no actual dual-drive hardware when writing the original
+code - I simulated everything!
+
+Here are some additional mods/changes:
+
+5) juke commands barcodes, config and help are faster because they don't first
+   status the changer.
+
+6) Added the contrib/ directory featuring tkreload2 and my Perl Makefile.PL
+   input file make.in.

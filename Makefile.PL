@@ -1,4 +1,4 @@
-our $VERSION = '2.1.1';
+our $VERSION = '2.1.3';
 
 use Tk::MMutil;
 
@@ -36,7 +36,7 @@ $JUKE_EXE   = "$JUKE_ROOT/juke";
 $CHANGER             = '/dev/sch0';
 $EEPOS_OPEN          = 1;
 $EEPOS_SHUT          = 2;
-$EJECT_BEFORE_UNLOAD = 0;
+$EJECT_BEFORE_UNLOAD = 'rewind';
 $JUKE                = $JUKE_EXE;
 $LOADERINFO          = '/usr/local/sbin/loaderinfo';
 $MT                  = '/bin/mt';
@@ -118,8 +118,11 @@ to an SE. If this is the case then enter the "mt"
 command to eject the media.  Frequently, the command
 is "offline", but other possibilities are "rewoffl",
 "unload" or "eject". Read your "mt" man page for the
-proper value. A vaue of zero (the default) assumes that
-an eject is not required before unloading a DTE.
+proper value. A vaue of zero assumes that an eject is
+not required before unloading a DTE. As a sanity check
+the default value is "rewind" - this prevents media
+from inadvertently being ejected from a drive if the
+drive is busy, perhaps doing a backup or restore.
 END
 
     $LOADERINFO = get($LOADERINFO, << "END");
@@ -135,11 +138,15 @@ Please enter the pathname of the 'mtx' command
 END
 
     $NRTAPE = get($NRTAPE, << "END");
-Please enter the device name of the no rewind tape
+Please enter the device name of the no rewind tape(s). If the jukebox
+has more than 1 drive, enter all the drive names separated by
+spaces
 END
 
     $TAPE = get($TAPE, << "END");
-Please enter the device name of the rewind tape
+Please enter the device name of the rewind tape(s). If the jukebox
+has more than 1 drive, enter all the drive names separated by
+spaces.
 END
 
     print <<"END";

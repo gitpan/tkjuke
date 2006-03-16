@@ -20,7 +20,7 @@ use subs qw/
 /;
 use strict;
 
-our (%barcodes, $dte_count, $hostname, @mail, $mt, $mtx, $se_count, $wait_load);
+our (%barcodes, $dte_count, $exit, $hostname, @mail, @mt, $mtx, $se_count, $wait_load);
 
 init;
 main;
@@ -149,9 +149,11 @@ sub customize {
     # programs.  Thus, one file provides identical information to shell and
     # Perl programs.
 
-    # Pathname for the "mt" command, plus, the rewind tape device name.
+    # Pathname for the "mt" command, plus, the rewind tape device name(s).
 
-    $mt = "$JUKE_CONFIG{MT} -f $JUKE_CONFIG{TAPE}";
+    foreach my $mt ( split ' ', $JUKE_CONFIG{TAPE} ) {
+	push @mt, "$JUKE_CONFIG{MT} -f $mt";
+    }
 
     # Pathname for the "mtx" command, plus, the changer device name.
 
@@ -171,19 +173,21 @@ sub customize {
     # read stdout.
 
     my $wait_load1 = sub {
+	my( $dte ) = @_;
 	for (my $n = 1; $n <= 100; $n++) {
 	    sleep 5;
-	    system "$mt rewind > /dev/null 2>&1";
+	    system "$mt[ $dte ] rewind > /dev/null 2>&1";
 	    return if $? == 0;
 	}
 	die 'wait-media-load-complete timeout';
     }; # end $wait_load1
 
     my $wait_load2 = sub {
+	my( $dte ) = @_;
 	my $out = '';
 	for (my $n = 1; $n <= 100; $n++) {
 	    sleep 5;
-	    open M, "$mt status 2>&1 |" or die $!;
+	    open M, "$mt[ $dte ] status 2>&1 |" or die $!;
 	    while ($_ = <M>) {
 		$out .= $_;
 	    }
@@ -205,7 +209,7 @@ sub customize {
 sub fini {
     
     untie %barcodes;
-    exit 0;
+    exit $exit;
 
 } # end fini
 
@@ -227,17 +231,21 @@ sub init {
     my $barcodes = 'JUKE_ROOT/juke.barcodes';
     tie %barcodes, 'SDBM_File', $barcodes, O_RDWR|O_CREAT, 0640;
 
-    my (@status) = sys "$mtx status"; # from now on use status() !
-    ($dte_count) = $status[0] =~ /(\d+) Drives/;
-    ($se_count)  = $status[0] =~ / (\d+) Slots/;
+    unless( $#ARGV == -1 or $ARGV[0] =~ /^barcodes|^config|^help/ ) {
+	my (@status) = sys "$mtx status"; # from now on use status() !
+	($dte_count) = $status[0] =~ /(\d+) Drives/;
+	($se_count)  = $status[0] =~ / (\d+) Slots/;
 
-    # Determine which SEs are mail slots.
+	# Determine which SEs are mail slots.
 
-    for (my $i = 1; $i <= $#status; $i++) {
-	if ($status[$i] =~ /Data Transfer Element (\d+)/) {
-	    $mail[$1] = ($status[$i] =~ m!IMPORT/EXPORT!) ? 1 : 0;
+	for (my $i = 1; $i <= $#status; $i++) {
+	    if ($status[$i] =~ /Data Transfer Element (\d+)/) {
+		$mail[$1] = ($status[$i] =~ m!IMPORT/EXPORT!) ? 1 : 0;
+	    }
 	}
-    }
+    } # unlessend
+	
+    $exit = 0;
 
 } # end init
 
@@ -275,7 +283,6 @@ sub main {
 	};
 
 	/^config$/ and do {
-	  print "do config\n";
 	    print STDOUT config;
 	    last CASE;
 	};
@@ -299,7 +306,7 @@ sub main {
 		bcenter "$hostname:$JUKE_CONFIG{CHANGER}:$dte:$ARGV[1]", $bc;
 	    }
 
-	    &$wait_load;
+	    &$wait_load( $dte );
 	    refresh;
 	    last CASE;
 	};
@@ -318,9 +325,10 @@ sub main {
 	    # Get destination SE from STDERR.
 
 	    my $eject = $JUKE_CONFIG{EJECT_BEFORE_UNLOAD};
-	    sys "$mt $eject 2>&1" if $eject;
+	    sys "$mt[ $dte ] $eject 2>&1", 'warn' if $eject;
 
             (@out) = sys "$mtx $invert @ARGV 2>&1";
+	    $exit = 1 if @out;
 	    ($se_destination) = $out[0] =~ /Storage Element (\d+)/;
 
 	    # Update barcode of SE unloaded from DTE.
@@ -348,9 +356,10 @@ sub main {
 	    # Perform the operation - exit if errors.
  
 	    my $eject = $JUKE_CONFIG{EJECT_BEFORE_UNLOAD};
-	    sys "$mt $eject 2>&1" if $eject;
+	    sys "$mt[ $dte ] $eject 2>&1", 'warn' if $eject;
 
 	    (@out) = sys "$mtx @ARGV 2>&1", 'warn';
+            $exit = 1 if $#out > 0;
 	    last CASE if $#out > 1; # probably a usage: message
 
 	    if ($#out != -1) {
@@ -391,7 +400,7 @@ sub main {
 		bcenter "$hostname:$JUKE_CONFIG{CHANGER}:$dte:$se_source", $bc;
 	    }
 
-	    &$wait_load;
+	    &$wait_load( $dte );
 	    refresh;
 	    last CASE;
 	};
@@ -508,16 +517,16 @@ sub status {
 		my $bc = $1;
 		if (defined $bc) {
 		    chomp $status[$i + $se];
-		    if ($status[$i + $se] =~ /VolumeTag/) {
-			$status[$i + $se] =~ s/(=.*)/=$bc/;
+		    if ($status[ $dte_count + $se ] =~ /VolumeTag/) {
+			$status[ $dte_count + $se ] =~ s/(=.*)/=$bc/;
 		    } else {
-			$status[$i + $se] .= ":VolumeTag=$bc";
+			$status[ $dte_count + $se ] .= ":VolumeTag=$bc";
 		    }
 		    $status[$i + $se] .= "\n";
 		} # ifend barcode
 	    }
-	}
-    }
+	} # ifend loaded DTE with a barcode
+    } # forend all DTEs
 
     return @status;
 
@@ -629,7 +638,7 @@ To unload the media:
 
 sol0@lehigh.edu
 
-Copyright (C) 2002 - 2004, Steve Lidie. All rights reserved.
+Copyright (C) 2002 - 2006, Steve Lidie. All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

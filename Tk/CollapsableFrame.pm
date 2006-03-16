@@ -220,7 +220,7 @@ Valid subwidget names are listed below.
 
 Stephen.O.Lidie@Lehigh.EDU, 2000/11/27.
 
-Copyright (C) 2000 - 2003, Stephen O. Lidie.
+Copyright (C) 2000 - 2006, Stephen O. Lidie.
 
 This program is free software, you can redistribute it and/or modify
 it under the same terms as Perl itself.

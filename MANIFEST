@@ -12,6 +12,15 @@ config/make-input.Lewis1-atape
 config/make-input.Mylib
 config/make-input.Rain
 config/make-input.Rigel
+contrib/
+contrib/README
+contrib/make.in
+contrib/build-tar-db2
+contrib/full-tar-backup2
+contrib/fultb2
+contrib/tkreload2
+contrib/tkreload-helper2
+contrib/tkreload.pl2
 MANIFEST
 Proc/Killfam.pm
 README
