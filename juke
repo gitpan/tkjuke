@@ -22,8 +22,8 @@ use strict;
 
 our (%barcodes, $dte_count, $exit, $hostname, @mail, @mt, $mtx, $se_count, $wait_load);
 
-init;
-main;
+my( @status ) = init;
+main @status;
 fini;
 
 sub barcodes {
@@ -114,7 +114,11 @@ sub bcenter {
 	return;
     }
 
-    $barcodes{"$hn:$ch:$dte:$sl"} = $bc;
+    if( $bc eq '' ) {
+	delete $barcodes{"$hn:$ch:$dte:$sl"};
+    } else {
+	$barcodes{"$hn:$ch:$dte:$sl"} = $bc;
+    }
 
 } # end bcenter
 
@@ -231,8 +235,9 @@ sub init {
     my $barcodes = 'JUKE_ROOT/juke.barcodes';
     tie %barcodes, 'SDBM_File', $barcodes, O_RDWR|O_CREAT, 0640;
 
-    unless( $#ARGV == -1 or $ARGV[0] =~ /^barcodes|^config|^help/ ) {
-	my (@status) = sys "$mtx status"; # from now on use status() !
+    my @status;
+    unless( $#ARGV == -1 or $ARGV[0] =~ /^config|^help/ or ( $#ARGV == 0 and $ARGV[0] =~ /^barcodes/ ) ) {
+	(@status) = sys "$mtx status"; # from now on use status() !
 	($dte_count) = $status[0] =~ /(\d+) Drives/;
 	($se_count)  = $status[0] =~ / (\d+) Slots/;
 
@@ -247,9 +252,13 @@ sub init {
 	
     $exit = 0;
 
+    @status;
+
 } # end init
 
 sub main {
+
+    my( @status ) = @_;
 
     # Check for 'invert' or 'eepos' arguments and save and remove them from 
     # the argument vector for later processing.
@@ -289,7 +298,7 @@ sub main {
 
 	/^status$/ and do {
 	    die "Usage: juke $ARGV[0]" unless $#ARGV == 0;
-	    print STDOUT status;
+	    print STDOUT status @status; # from init()
 	    last CASE;
 	};
 
@@ -316,7 +325,7 @@ sub main {
 
 	    # Get source DTE and thus source SE from a status command output.
 
-	    my (@out) = status;
+	    my (@out) = status @status;
 	    my ($bc, $dte, $se_source, $se_destination);
 	    $dte = (defined $ARGV[2]) ? $ARGV[2] : 0;
 	    ($se_source) = $out[1 + $dte] =~ /Element (\d+) Loaded/;
@@ -347,7 +356,7 @@ sub main {
 
 	    # Get source DTE and thus source SE from a status command output.
 
-	    my (@out) = status;
+	    my (@out) = status @status;
 	    my ($bc, $dte, $se_source, $se_destination);
 	    $dte = (defined $ARGV[2]) ? $ARGV[2] : 0;
 	    ($se_source) = $out[1 + $dte] =~ /Element (\d+) Loaded/;
@@ -426,7 +435,7 @@ sub main {
 	};
 
 	/^loaded$/ and do {
-	    my (@status) = status;
+	    my (@status) = status @status;
 	    foreach (@status) {
 		next unless /Data Transfer Element/;
 		/VolumeTag = (.*)/;
@@ -467,10 +476,12 @@ sub refresh {
 
 sub status {
 
+    my( @status ) = @_;
+
     # This subroutine executes an "mtx status" command and returns the
     # results - possibly modified with pseudo barcodes.
 
-    my (@status) = sys "$mtx status 2>&1";
+    (@status) = sys "$mtx status 2>&1" if "@status" eq '';
     foreach (@status) {
 	s/\s+$/\n/;
     }

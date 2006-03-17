@@ -1,4 +1,4 @@
-our $VERSION = '2.1.3';
+our $VERSION = '2.1.4';
 
 use Tk::MMutil;
 
@@ -188,16 +188,12 @@ END
     system <<"END";
 mkdir ./blib  2> /dev/null
 mkdir $blib_root      2> /dev/null
-mkdir $blib_root/Proc 2> /dev/null
 mkdir $blib_root/Tk   2> /dev/null
 $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; print"                           juke > $blib_root/juke
 #$PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; print"                       mtxatape > $blib_root/juke
 $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; s+JUKE_EXE+$JUKE_EXE+g; print" tkjuke > $blib_root/tkjuke
 $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; print"                                    Jukebox.pm > $blib_root/Jukebox.pm
 cp -Rp juke.config*   $blib_root/
-cp Proc/*   $blib_root/Proc/
-cp Tk/ExecuteCommand.pm  $blib_root/Tk/
-cp Tk/CollapsableFrame.pm  $blib_root/Tk/
 cp Tk/JukeboxSlot.pm  $blib_root/Tk/
 cp Tk/JukeboxDrive.pm  $blib_root/Tk/
 chmod -R 744 $blib_root

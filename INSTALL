@@ -33,18 +33,18 @@ This software requires Perl/Tk, and obviously, mtx.
 
   Get it from:
 
-	http://mirrors.develooper.com/perl/backup.pause/authors/id/N/NI/NI-S/Tk804.025.tar.gz
+	http://search.cpan.org/~ni-s/Tk-804.027/
 
   Briefly, installation goes like this:
 
-	tar -zxvpf Tk804.025.tar.gz
-	cd Tk804.025
+	tar -zxvpf Tk804.027.tar.gz
+	cd Tk804.027
 	/usr/local/bin/perl Makefile.PL
 	make
 	make test
 	make install
 
-- Proc::ProcessTable module
+- Proc::ProcessTable, Tk::ExecuteCommand and Tk::CollapsableFrame modules
 
   Fetch from CPAN and install in the standard manner:
 
@@ -95,3 +95,4 @@ Lehigh University Computing Center
 sol0@lehigh.edu
 
 2004/01/14
+2006/03/17
