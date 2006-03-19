@@ -1,3 +1,4 @@
+$Tk::Jukebox::VERSION = '2.0';
 
 package Jukebox;
 

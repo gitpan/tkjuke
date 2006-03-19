@@ -358,7 +358,7 @@ sub main {
 
 	    my (@out) = status @status;
 	    my ($bc, $dte, $se_source, $se_destination);
-	    $dte = (defined $ARGV[2]) ? $ARGV[2] : 0;
+	    $dte = (defined $ARGV[1]) ? $ARGV[1] : 0;
 	    ($se_source) = $out[1 + $dte] =~ /Element (\d+) Loaded/;
 	    ($bc) = $out[1 + $dte] =~ /VolumeTag = (.*)/;
 	    

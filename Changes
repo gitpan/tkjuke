@@ -138,6 +138,7 @@ Here are some additional mods/changes:
 
 1) Save the results of juke's initial status.  Subcommand processors use that
    rather than statusing the library yet again - makes things run a tad faster.
+
 2) juke's barcodes command with an empty barcode removes the entry from the
    barcode DB.
 
@@ -146,3 +147,14 @@ and otherwise fix errors reported by the CPAN indexer when I submitted 2.1.3.
 
 3) So I removed Proc::killfam, Tk::ExecuteCommand and Tk::CollapsableFrame
    from this distribution - you'll have to install them yourself.
+
+***** 2.1.5, 2006/03/18
+
+1) Ah ha! I knew something was odd, and I finally figured out the obscure bug.
+   "juke next [dte]" was mis-coded so it always used DTE 0, rather than the
+   DTE specified. But it was my wierd coding that was the problem, so the next
+   used the proper DTE and actually worked properly, but the tape-wait-ready 
+   code always used /dev/nst0 rather than /dev/nst{$dte}.
+
+2) Well, the 2.1.4 CPAN indexer showed my .pm files had no version, so now
+   they do.  I hope this is the last rev for some time ...

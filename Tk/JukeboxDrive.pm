@@ -1,3 +1,4 @@
+$Tk::JukeboxDrive::VERSION = '2.0';
 
 package Tk::JukeboxDrive;
 
