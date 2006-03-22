@@ -1,7 +1,7 @@
 
 "tkjuke" is a GUI for manipulating a jukebox in a windowed environment,
 which uses the program "juke" as the underlying controller. It has
-been tested under Linux and IRIX - the default configuration defaults
+been tested under AIX,  Linux and IRIX - the default configuration defaults
 are suitable for many Linux installations. (There is unsupported code
 that uses atape rather than mtx for the controller program. It's a small
 mtx <=> atape interface layer I use on AIX. You can manually copy the
@@ -29,25 +29,29 @@ have such a beast, I can only hope everything works in the real world.
 do:
 
 
-juke config                           - print juke.config
+juke V2.2.0 usage:
 
-juke status                           - print jukebox status
+ juke [help]                            - print this information
+
+ juke config                            - print juke.config
+
+ juke status                            - print jukebox status
  
-juke first                 [DTE#]     - unload current media, load first
-juke last                  [DTE#]     - unload current media, load last
-juke next                  [DTE#]     - unload current media, load next
-juke previous              [DTE#]     - unload current media, load previous
+ juke first    [DTE#]                   - unload current media, load first
+ juke last     [DTE#]                   - unload current media, load last
+ juke next     [DTE#]                   - unload current media, load next
+ juke previous [DTE#]                   - unload current media, load previous
 
-juke [invert] load    SE#  [DTE#]     - load media from jukebox, maybe inverted
-juke [invert] unload [SE#] [DTE#]     - return media to jukebox, maybe inverted
+ juke [invert] load    SE#  [DTE#]      - load media from jukebox, may be inverted
+ juke [invert] unload [SE#] [DTE#]      - return media to jukebox, may be inverted
 
-juke [eepos eepos#] transfer SE# SE#  - transfer media or bump mail slot
+ juke [eepos eepos#] transfer SE# SE#   - transfer media or bump mail slot
 
-juke loaded                           - print barcode(s) of loaded media
+ juke loaded   [DTE#]                   - print barcode(s) of loaded media
 
-juke barcodes [bc1 bc2 ... bc-#slots] - print or set jukebox barcode list
+ juke barcodes [pathname | SE# barcode] - print or set jukebox barcode list
 
-juke refresh-tkjuke                   - send SIGHUP to update tkjuke's display
+ juke refresh-tkjuke                    - send SIGHUP to update tkjuke's display
 
 
 Steve Lidie
@@ -55,4 +59,4 @@ Lehigh University Computing Center
 sol0@lehigh.edu
 
 2004/03/12
-2006/03/17
+2006/03/21

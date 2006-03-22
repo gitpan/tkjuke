@@ -11,7 +11,7 @@ This software requires Perl/Tk, and obviously, mtx.
 
 - mtx
 
-  Tested with mtx versions 1.2.9, 1.2.10, 1.2.15 and 1.2.17.
+  Tested with mtx versions 1.2.9, 1.2.10, 1.2.15 and 1.2.17, 1.2.18rel.
 
 - Perl
 
@@ -74,14 +74,14 @@ window from which tkjuke was started.
 ***** NOTE
 *****
 
-  The "juke" variable $wait in the subroutine customize() defines an
-  anonymous subroutine that ensures media is ready after it has been
-  loaded into a DTE. It's value can be either $wait1 (Linux) or $wait2
-  (IRIX). The basic idea is to status the drive until it is ready.
+  The program "juke" defines a system command that ensures media is
+  ready after it has been loaded into a DTE. The basic idea is to
+  status the drive until it is ready.
 
-  IFF you experience tape-not-ready errors, you must inspect this code
-  and make appropriate changes. The code comments tell you what to do.
-  Please, send any changes to sol0@lehigh.edu.
+  IFF you experience tape-not-ready errors, or long delays after a
+  "juke load" or "juke next" command, you must inspect this code
+  and make appropriate changes. The code comments in "wait-tape-ready"
+  tell you what to do. Please, send any changes to sol0@lehigh.edu.
 
 *****
 ***** INSTALLATION COMPLETE.
@@ -95,4 +95,4 @@ Lehigh University Computing Center
 sol0@lehigh.edu
 
 2004/01/14
-2006/03/17
+2006/03/21

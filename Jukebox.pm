@@ -7,6 +7,7 @@ package Jukebox;
 # appear in only one file.  All configuration changes should be made
 # to the shell file, and we'll inherit them here.
 
+use Carp;
 use Exporter;
 use base qw/Exporter/;
 @EXPORT = qw/%JUKE_CONFIG sys/;
@@ -15,7 +16,7 @@ our (%JUKE_CONFIG);
 
 my (
     $changer, $eepos_open, $eepos_shut, $juke, $loaderinfo,
-    $mt, $mtx, $nrtape, $tape, $version,
+    $mt, $mtx, $nrtape, $tape, $version, $wait_tape_ready,
 );
 
 my $sconfig = 'JUKE_ROOT/juke.config';
@@ -39,6 +40,7 @@ my $setup = join ' ', @setup;
 ($nrtape)               =  $setup =~ / NRTAPE=(.*)/m;
 ($tape)                 =  $setup =~ / TAPE=(.*)/m;
 ($version)              =  $setup =~ / VERSION=(.*)/m;
+($wait_tape_ready)      =  $setup =~ / WAIT_TAPE_READY=(.*)/m;
 
 %JUKE_CONFIG = (
     CHANGER             => $changer,
@@ -52,6 +54,7 @@ my $setup = join ' ', @setup;
     NRTAPE              => $nrtape,
     TAPE                => $tape,
     VERSION             => $version,
+    WAIT_TAPE_READY     => $wait_tape_ready,
 );
 
 sub sys {
@@ -62,7 +65,7 @@ sub sys {
     my (@out) = `$cmd`;
     return @out unless $?;
     my $err = "Failed : '$cmd' : " . ($? >> 8);
-    $warn ? warn $err : die $err;
+    $warn ? carp $err : croak $err;
     return @out;
 
 } # end sys

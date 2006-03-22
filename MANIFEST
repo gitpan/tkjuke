@@ -34,3 +34,4 @@ images/tkjuke-large.gif
 atape/atape-mtx
 atape/atape-loaderinfo
 META.yml                                 Module meta-data (added by MakeMaker)
+wait-tape-ready

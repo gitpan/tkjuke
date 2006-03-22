@@ -20,7 +20,7 @@ use subs qw/
 /;
 use strict;
 
-our (%barcodes, $dte_count, $exit, $hostname, @mail, @mt, $mtx, $se_count, $wait_load);
+our (%barcodes, $dte_count, $exit, $hostname, @mail, @mt, $mtx, $se_count, $wait_tape_ready);
 
 my( @status ) = init;
 main @status;
@@ -142,10 +142,7 @@ sub config {
 
 sub customize {
 
-    # Configure the following variables for your site.  You may need to
-    # modify some code in this subroutine,  although it's unlikely that you
-    # will need to touch the remainder of the source code, provided you have
-    # properly initialized the jukebox configuration file 'juke.config'.
+    # Configure the following variables for your site, if required. Unlikely.
     #
     # The file 'juke.config' contains a series of shell EXPORT commands that
     # define the media and jukebox devices on this machine.  The Perl module
@@ -165,48 +162,11 @@ sub customize {
     
     # After a media is loaded, there's a time period in which it's not ready,
     # due to mechanical delays, or perhaps because the media is rewinding. 
-    # $wait_load is a code reference to a subroutine that waits for the media
+    # $wait_tape_ready is the pathname of a program that waits for the media
     # to become ready, or dies with a timeout failure. The logic is often
-    # dependant upon the operating system and physical device, but two
-    # methods are shown below.  Most commonly, $wait_load1 suffices, but if a
-    # rewind returns an error even when the media is ready, try $wait_load2.
-    #
-    # $wait_load1 works for "mt rewind" commands that return a success or
-    # failure return code. $wait_load2 works for an LTO Ultrium library under
-    # IRIX in which "mt rewind" ALWAYS returns an error, and we are forced to
-    # read stdout.
+    # dependant upon the operating system and physical device.
 
-    my $wait_load1 = sub {
-	my( $dte ) = @_;
-	for (my $n = 1; $n <= 100; $n++) {
-	    sleep 5;
-	    system "$mt[ $dte ] rewind > /dev/null 2>&1";
-	    return if $? == 0;
-	}
-	die 'wait-media-load-complete timeout';
-    }; # end $wait_load1
-
-    my $wait_load2 = sub {
-	my( $dte ) = @_;
-	my $out = '';
-	for (my $n = 1; $n <= 100; $n++) {
-	    sleep 5;
-	    open M, "$mt[ $dte ] status 2>&1 |" or die $!;
-	    while ($_ = <M>) {
-		$out .= $_;
-	    }
-	    close M or die $!;
-	    return if $out =~ /Media : READY/s;
-	}
-	die 'wait-media-load-complete timeout';
-    }; # end $wait_load2
-
-    $wait_load = $wait_load1;	# many Linux systems
-
-# Uncomment the following line if the subroutine defined by $wait_load1
-# appears not to work.
-
-#   $wait_load = $wait_load2;	# IRIX LTO Ultrium, mt aborts if not ready
+    $wait_tape_ready = $JUKE_CONFIG{WAIT_TAPE_READY};
 
 } # end customize
 
@@ -303,7 +263,7 @@ sub main {
 	};
 
 	/^load$/ and do {
-	    die "Usage: juke [invert] $ARGV[0] slot# [drive#]" if $#ARGV > 2;
+	    die "Usage: juke [invert] $ARGV[0] SE# [DTE#]" if $#ARGV > 2;
 	    sys "$mtx $invert @ARGV 2>&1";
 	    my $dte = (defined $ARGV[2]) ? $ARGV[2] : 0;
 
@@ -315,13 +275,13 @@ sub main {
 		bcenter "$hostname:$JUKE_CONFIG{CHANGER}:$dte:$ARGV[1]", $bc;
 	    }
 
-	    &$wait_load( $dte );
+	    sys "$wait_tape_ready $dte", 'warn';
 	    refresh;
 	    last CASE;
 	};
 
         /^unload$/ and do {
-            die "Usage: juke [invert] $ARGV[0] [slot#] [drive#]" if $#ARGV > 2;
+            die "Usage: juke [invert] $ARGV[0] [SE#] [DTE#]" if $#ARGV > 2;
 
 	    # Get source DTE and thus source SE from a status command output.
 
@@ -352,7 +312,7 @@ sub main {
         };
 
 	/^first|last|next|previous$/ and do {
-	    die "Usage: juke $ARGV[0] [drive#]" if $#ARGV > 1;
+	    die "Usage: juke $ARGV[0] [DTE#]" if $#ARGV > 1;
 
 	    # Get source DTE and thus source SE from a status command output.
 
@@ -409,14 +369,13 @@ sub main {
 		bcenter "$hostname:$JUKE_CONFIG{CHANGER}:$dte:$se_source", $bc;
 	    }
 
-	    &$wait_load( $dte );
+	    sys "$wait_tape_ready $dte", 'warn';
 	    refresh;
 	    last CASE;
 	};
 
 	/^transfer$/ and do {
-	    die "Usage: juke [eepos eepos#] $ARGV[0] src-slot# dest-slot#"
-		if $#ARGV != 2;
+	    die "Usage: juke [eepos eepos#] $ARGV[0] src-SE# dest-SE#" if $#ARGV != 2;
 	    sys "$mtx $eepos @ARGV 2>&1";
 	    if ($ARGV[1] != $ARGV[2]) {
 		if (exists $barcodes{"$hostname:$JUKE_CONFIG{CHANGER}\:\:$ARGV[1]"}) {
@@ -435,14 +394,23 @@ sub main {
 	};
 
 	/^loaded$/ and do {
+	    die "Usage: juke $ARGV[0] [DTE#]" if $#ARGV > 1;
+	    my $dte = $ARGV[1];
+	    die "juke: DTEs 0 through ", ( $dte_count - 1 ), " are available, DTE $dte is illegal."
+		if defined( $dte ) and $dte > ( $dte_count - 1 );
 	    my (@status) = status @status;
+	    my @bcs;
 	    foreach (@status) {
 		next unless /Data Transfer Element/;
 		/VolumeTag = (.*)/;
 		my $bc = defined $1 ? $1 : '';
-		print STDOUT "'$bc' ";
+		push @bcs, "'$bc'";
 	    }
-	    print "\n";
+	    if( defined $dte ) {
+		print STDOUT $bcs[ $dte ], "\n";
+	    } else {
+		print STDOUT "@bcs\n";
+	    }
 	    last CASE;
 	};
 
@@ -462,8 +430,6 @@ sub main {
 } # end main
 
 sub refresh {
-
-    # sys "/bin/kill -HUP `/bin/cat /tmp/tkjuke-slave-sch0.pid`";
 
     my $pidfile = '/tmp/tkjuke-slave-' . basename( $JUKE_CONFIG{CHANGER} ) . '.pid';
     if( open PID, $pidfile ) {
@@ -565,7 +531,7 @@ juke V${JUKE_CONFIG{VERSION}} usage:
 
  juke [eepos eepos#] transfer SE# SE#   - transfer media or bump mail slot
 
- juke loaded                            - print barcode(s) of loaded media
+ juke loaded   [DTE#]                   - print barcode(s) of loaded media
 
  juke barcodes [pathname | SE# barcode] - print or set jukebox barcode list
 

@@ -1,16 +1,21 @@
 #!/usr/local/bin/perl -w
+#
+# This code assists the daily backup program by reading tar's stdout and
+# generating a consise database of filenames and which tape and file
+# number the files reside. It's smart enough to see tape volume changes.
 # 
 # @ARGV:
 #  0 = STDERR path name
 #  1 = tape VSN:file#
 #  2 = file system list
+#  3 = DTE
 
 use File::Basename;
 use POSIX;
 use subs qw/fin ini print_report sys/;
 use strict;
 
-our ($DB, %DB, $VSN, @VSNS);
+our ($DB, %DB, $FILENO, $VSN, @VSNS);
 
 my $pid = fork;
 if ($pid) {			# parent
@@ -31,9 +36,11 @@ while (<STDIN>) {
 	next;
     }
     if (/^  Storage Changer/) {
-	my ($nslots) = /(\d+) Slots/;
-	$_ = <STDIN>;
-	($VSN) = /VolumeTag = (\S+)/;
+	my( $ndrives ) = /(\d+) Drives/;
+	my( $nslots ) = /(\d+) Slots/;
+	my @dtes;
+	push @dtes, ( $_ = <STDIN> ) for 1 .. $ndrives;
+	($VSN) = $dtes[ $ARGV[ 3 ] ] =~ /VolumeTag = (\S+)/;
 	$VSN = uc $VSN;
 	push @VSNS, $VSN;
 	<STDIN> for 1 .. $nslots;
@@ -79,7 +86,7 @@ while (<STDIN>) {
     }
 	
     print STDERR "UNDEF=$_, s=@s!\n" unless defined $s[7];
-    $DB{$_} = "$VSN " . scalar(localtime($s[9])) . " $s[7]";
+    $DB{$_} = "$VSN:$FILENO " . scalar(localtime($s[9])) . " $s[7]";
 }
 
 print_report $_;
@@ -95,8 +102,9 @@ sub fin {
 sub ini {
     open ERR, ">>$ARGV[0]" or die "Cannot write $ARGV[0]: $?";
     $VSN = uc $ARGV[1];
+    ( $VSN, $FILENO ) = $VSN =~ /(\S+):(\d+)/;
     push @VSNS, $VSN;
-    $DB = "/root/admin/backup/db/$VSN.gz";
+    $DB = "/root/admin/backup/db/$VSN:$FILENO.gz";
     open DB, "| /bin/gzip > $DB " or die "DB open failed: $!";
     print DB "Backup start,    ", `date`;
     %DB = ();
@@ -104,7 +112,7 @@ sub ini {
 
 sub print_report {
 
-    print DB "\nDatabase Report For Tape(s) @VSNS - ", `date`, "\n";
+    print DB "\nDatabase report for file $FILENO, tape(s) @VSNS - ", `date`, "\n";
     print DB "backup_list = ", $ARGV[2], "\n";
     foreach my $file (sort keys %DB) {
 	printf DB "%-72s = %s\n", $file, $DB{$file};

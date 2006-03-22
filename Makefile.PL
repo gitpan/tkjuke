@@ -1,4 +1,4 @@
-our $VERSION = '2.1.5';
+our $VERSION = '2.2.0';
 
 use Tk::MMutil;
 
@@ -21,6 +21,7 @@ our (
      $MTX,
      $NRTAPE,
      $TAPE,
+     $WAIT_TAPE_READY,
 );
 
 $PERL       = $^X;
@@ -43,6 +44,7 @@ $MT                  = '/bin/mt';
 $MTX                 = '/usr/local/sbin/mtx';
 $NRTAPE              = '/dev/nst0';
 $TAPE                = '/dev/st0';
+$WAIT_TAPE_READY     = "$JUKE_ROOT/wait-tape-ready";
 
 sub MY::post_initialize {
 
@@ -164,6 +166,7 @@ mtx                 = $MTX
 nrtape              = $NRTAPE
 tape                = $TAPE
 version             = $VERSION
+wait-tape-ready     = $WAIT_TAPE_READY
 END
 
     print "\nWriting juke.config.\n";
@@ -180,6 +183,7 @@ export MTX=$MTX
 export NRTAPE=$NRTAPE
 export TAPE=$TAPE
 export VERSION=$VERSION
+export WAIT_TAPE_READY=$WAIT_TAPE_READY
 END
     close J;
 
@@ -190,6 +194,7 @@ mkdir ./blib  2> /dev/null
 mkdir $blib_root      2> /dev/null
 mkdir $blib_root/Tk   2> /dev/null
 $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; print"                           juke > $blib_root/juke
+$PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; print"                wait-tape-ready > $blib_root/wait-tape-ready
 #$PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; print"                       mtxatape > $blib_root/juke
 $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; s+PERL+$PERL+; s+JUKE_EXE+$JUKE_EXE+g; print" tkjuke > $blib_root/tkjuke
 $PERL -ne "s+JUKE_ROOT+$JUKE_ROOT+g; print"                                    Jukebox.pm > $blib_root/Jukebox.pm
