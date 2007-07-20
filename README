@@ -29,7 +29,7 @@ have such a beast, I can only hope everything works in the real world.
 do:
 
 
-juke V2.2.0 usage:
+juke V2.2.1 usage:
 
  juke [help]                            - print this information
 
@@ -60,3 +60,4 @@ sol0@lehigh.edu
 
 2004/03/12
 2006/03/21
+2007/07/20

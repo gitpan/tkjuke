@@ -21,6 +21,7 @@ use subs qw/
 use strict;
 
 our (%barcodes, $dte_count, $exit, $hostname, @mail, @mt, $mtx, $se_count, $wait_tape_ready);
+our $BROKEN_SUN_LIBRARY = 0;
 
 my( @status ) = init;
 main @status;
@@ -200,6 +201,7 @@ sub init {
 	(@status) = sys "$mtx status"; # from now on use status() !
 	($dte_count) = $status[0] =~ /(\d+) Drives/;
 	($se_count)  = $status[0] =~ / (\d+) Slots/;
+    $se_count = $BROKEN_SUN_LIBRARY if $BROKEN_SUN_LIBRARY > 0;
 
 	# Determine which SEs are mail slots.
 
@@ -399,17 +401,18 @@ sub main {
 	    die "juke: DTEs 0 through ", ( $dte_count - 1 ), " are available, DTE $dte is illegal."
 		if defined( $dte ) and $dte > ( $dte_count - 1 );
 	    my (@status) = status @status;
+	    my $first = 1;
 	    my @bcs;
 	    foreach (@status) {
 		next unless /Data Transfer Element/;
 		/VolumeTag = (.*)/;
 		my $bc = defined $1 ? $1 : '';
-		push @bcs, "'$bc'";
+		push @bcs, $bc;
 	    }
 	    if( defined $dte ) {
 		print STDOUT $bcs[ $dte ], "\n";
 	    } else {
-		print STDOUT "@bcs\n";
+		print STDOUT join( ' ', @bcs ), "\n";
 	    }
 	    last CASE;
 	};
@@ -490,6 +493,7 @@ sub status {
     for (my $i = 1; $i <= $dte_count; $i++) {
 	if ( $status[$i] =~ /Storage Element (\d+) Loaded/ ) {
 	    my $se = $1;
+            last if $se > $BROKEN_SUN_LIBRARY;
 	    if ( $status[$i] =~ /VolumeTag = (.*)/ ) {
 		my $bc = $1;
 		if (defined $bc) {
@@ -505,7 +509,7 @@ sub status {
 	} # ifend loaded DTE with a barcode
     } # forend all DTEs
 
-    return @status;
+    return @status[ 0 .. ( $#status - $BROKEN_SUN_LIBRARY ) ];
 
 } # end status
 
@@ -615,7 +619,7 @@ To unload the media:
 
 sol0@lehigh.edu
 
-Copyright (C) 2002 - 2006, Steve Lidie. All rights reserved.
+Copyright (C) 2002 - 2007, Steve Lidie. All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
